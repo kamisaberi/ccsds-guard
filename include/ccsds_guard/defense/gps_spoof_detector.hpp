@@ -13,7 +13,8 @@ public:
         double max_acceleration_mps2{30.0};
     };
 
-    explicit constexpr GpsSpoofDetector(const Config& cfg = {}) noexcept : cfg_(cfg) {}
+    constexpr GpsSpoofDetector() noexcept = default;
+    explicit constexpr GpsSpoofDetector(const Config& cfg) noexcept : cfg_(cfg) {}
 
     [[nodiscard]] bool validate_kinematics(const Vector3D& new_pos,
                                           double current_time_sec) noexcept;
