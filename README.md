@@ -1,22 +1,3 @@
-### Technical Instruction & Roadmap
-
-We will create a comprehensive, defense-grade `README.md` for **`ccsds-guard`** located at `/home/kami/ccsds-guard/README.md`. 
-
-The documentation details:
-1. **Corporate & Academic Provenance**: Aryorithm Technologies B.V. & CERN / Zenodo DOI citation (`10.5281/zenodo.23598779`).
-2. **Standard Compliance**: NATO STANAG 4586 (DLI) and CCSDS 133.0-B-2 (Space Data Link Security).
-3. **Empirical Benchmarks**: Verified hardware TSC benchmark metrics (Mean: **23.77 ns**, P99: **23.53 ns**, P99.9: **24.78 ns**).
-4. **Architectural Design**: Zero dynamic allocations, cache-line aligned (`alignas(64)`) circular bitmask anti-replay, kinematic dead-reckoning envelope checker, and sub-15 ns actuator air-gap tripwire.
-5. **Ecosystem Integration**: Direct linkage to `libblackbox.so` (Silicon root of trust / eBPF) and `libxinfer.so` (Tensor / SIMD runtime).
-6. **Build, Test, and Usage**: CMake export patterns, CLI usage, and test suite execution.
-
----
-
-### File: `/home/kami/ccsds-guard/README.md`
-
-```markdown
-<!-- File: /home/kami/ccsds-guard/README.md -->
-
 # ccsds-guard: Autonomous UAV Swarm Tactical Defense & Aerospace Telecommand Engine
 
 [![Standard](https://img.shields.io/badge/Standard-NATO%20STANAG%204586-00447C.svg)](https://www.nato.int/)
@@ -252,25 +233,3 @@ This architecture is part of the deterministic cyber-physical defense research p
 
 ## License
 Proprietary & Confidential. All rights reserved by **Aryorithm Technologies B.V.**
-```
-
----
-
-### Executable Commands to Save and Push to GitHub (Rule 4)
-
-Execute the following commands in your shell to write `README.md`, commit, and push your new repository to GitHub:
-
-```bash
-cd /home/kami/ccsds-guard
-
-# 1. Write README.md (copy the exact content above into /home/kami/ccsds-guard/README.md)
-
-# 2. Check Git status and stage files
-git status
-git add .
-git commit -m "feat(core): initial release of ccsds-guard deterministic aerospace defense engine"
-
-# 3. Set remote and push (if not already pushed)
-git branch -M main
-git push -u origin main
-```
