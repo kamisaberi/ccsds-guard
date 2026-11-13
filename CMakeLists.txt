@@ -36,7 +36,7 @@ include_directories(
 )
 
 # -----------------------------------------------------------------------------
-# LINK SENTINEL ECOSYSTEM LIBRARIES (Identical to blackbox-sentinel)
+# LINK SENTINEL ECOSYSTEM LIBRARIES
 # -----------------------------------------------------------------------------
 find_package(Threads REQUIRED)
 find_library(BLACKBOX_LIB blackbox REQUIRED PATHS /usr/local/lib /usr/lib)
@@ -74,7 +74,6 @@ target_include_directories(ccsds_guard_static PUBLIC
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
-# Force dynamic link recording via -Wl,--no-as-needed
 target_link_libraries(ccsds_guard PUBLIC
     -Wl,--no-as-needed
     ${BLACKBOX_LIB}
@@ -91,9 +90,19 @@ target_link_libraries(ccsds_guard_static PUBLIC
     Threads::Threads
 )
 
-# CLI Tool
+# Standalone CLI Tool
 add_executable(ccsds-guard-ctl tools/ccsds_guard_ctl/main.cpp)
 target_link_libraries(ccsds-guard-ctl PRIVATE
+    ccsds_guard
+    -Wl,--no-as-needed
+    ${BLACKBOX_LIB}
+    ${XINFER_LIB}
+    -Wl,--as-needed
+)
+
+# Extension Plugin for sentinel-stack CLI (aryo aerospace ...)
+add_executable(aryo-aerospace tools/aryo_aerospace/main.cpp)
+target_link_libraries(aryo-aerospace PRIVATE
     ccsds_guard
     -Wl,--no-as-needed
     ${BLACKBOX_LIB}
@@ -134,7 +143,7 @@ target_link_libraries(test_stanag PRIVATE
 add_test(NAME TestStanag COMMAND test_stanag)
 
 # Installation Rules
-install(TARGETS ccsds_guard ccsds_guard_static ccsds-guard-ctl
+install(TARGETS ccsds_guard ccsds_guard_static ccsds-guard-ctl aryo-aerospace
     EXPORT CcsdsGuardTargets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
