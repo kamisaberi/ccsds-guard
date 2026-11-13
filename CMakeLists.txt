@@ -1,3 +1,5 @@
+# File: /home/kami/ccsds-guard/CMakeLists.txt
+
 cmake_minimum_required(VERSION 3.20)
 project(ccsds_guard VERSION 1.0.0 LANGUAGES CXX)
 
@@ -6,7 +8,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Optimization and performance flags
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options(
         -O3
@@ -21,10 +22,8 @@ endif()
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-# Public include headers
 include_directories(include)
 
-# Core Library Sources
 set(LIB_SOURCES
     src/core/tsc_clock.cpp
     src/ccsds/tc_frame.cpp
@@ -37,7 +36,6 @@ set(LIB_SOURCES
     src/pipeline/guard_engine.cpp
 )
 
-# Shared and Static Libraries
 add_library(ccsds_guard SHARED ${LIB_SOURCES})
 add_library(ccsds_guard_static STATIC ${LIB_SOURCES})
 set_target_properties(ccsds_guard_static PROPERTIES OUTPUT_NAME ccsds_guard)
@@ -63,7 +61,7 @@ target_link_libraries(ccsds-guard-ctl PRIVATE ccsds_guard)
 add_executable(bench_latency benchmarks/bench_latency.cpp)
 target_link_libraries(bench_latency PRIVATE ccsds_guard)
 
-# Test Suite Runner
+# Tests
 enable_testing()
 add_executable(test_replay tests/test_replay_window.cpp)
 target_link_libraries(test_replay PRIVATE ccsds_guard)
@@ -83,7 +81,6 @@ install(TARGETS ccsds_guard ccsds_guard_static ccsds-guard-ctl
 
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-# CMake Package Export Config
 set(CONFIG_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/CcsdsGuard)
 configure_package_config_file(
     cmake/CcsdsGuardConfig.cmake.in
@@ -107,7 +104,6 @@ install(EXPORT CcsdsGuardTargets
     DESTINATION ${CONFIG_INSTALL_DIR}
 )
 
-# PkgConfig export
 configure_file(
     cmake/ccsds_guard.pc.in
     ${CMAKE_CURRENT_BINARY_DIR}/ccsds_guard.pc
