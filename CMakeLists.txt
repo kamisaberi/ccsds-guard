@@ -8,6 +8,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# RPATH configuration: ensures binaries resolve /usr/local/lib ecosystem shared libraries
+set(CMAKE_SKIP_BUILD_RPATH FALSE)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+set(CMAKE_INSTALL_RPATH "/usr/local/lib")
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
+# Compiler performance flags
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options(
         -O3
@@ -22,8 +29,32 @@ endif()
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
-include_directories(include)
+# Core include directories
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    /usr/local/include
+)
 
+# -----------------------------------------------------------------------------
+# LINK SENTINEL ECOSYSTEM LIBRARIES
+# -----------------------------------------------------------------------------
+find_package(Threads REQUIRED)
+
+find_library(BLACKBOX_LIB
+    NAMES blackbox blackbox_essential
+    PATHS /usr/local/lib /usr/lib
+    REQUIRED
+)
+message(STATUS "[ccsds-guard] Found Blackbox Essential library: ${BLACKBOX_LIB}")
+
+find_library(XINFER_LIB
+    NAMES xinfer xinfer-essential
+    PATHS /usr/local/lib /usr/lib
+    REQUIRED
+)
+message(STATUS "[ccsds-guard] Found Xinfer Essential library: ${XINFER_LIB}")
+
+# Library sources
 set(LIB_SOURCES
     src/core/tsc_clock.cpp
     src/ccsds/tc_frame.cpp
@@ -36,43 +67,66 @@ set(LIB_SOURCES
     src/pipeline/guard_engine.cpp
 )
 
-find_library(BLACKBOX_LIB NAMES blackbox blackbox_essential REQUIRED PATHS /usr/local/lib /usr/lib)
-find_library(XINFER_LIB NAMES xinfer REQUIRED PATHS /usr/local/lib /usr/lib)
-
+# Shared and Static Libraries
 add_library(ccsds_guard SHARED ${LIB_SOURCES})
 add_library(ccsds_guard_static STATIC ${LIB_SOURCES})
 set_target_properties(ccsds_guard_static PROPERTIES OUTPUT_NAME ccsds_guard)
 
-
 target_include_directories(ccsds_guard PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:/usr/local/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 target_include_directories(ccsds_guard_static PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:/usr/local/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
-find_package(Threads REQUIRED)
-target_link_libraries(ccsds_guard PUBLIC Threads::Threads)
-target_link_libraries(ccsds_guard_static PUBLIC Threads::Threads)
+target_link_libraries(ccsds_guard PUBLIC
+    ${BLACKBOX_LIB}
+    ${XINFER_LIB}
+    Threads::Threads
+)
+
+target_link_libraries(ccsds_guard_static PUBLIC
+    ${BLACKBOX_LIB}
+    ${XINFER_LIB}
+    Threads::Threads
+)
 
 # CLI Tool
 add_executable(ccsds-guard-ctl tools/ccsds_guard_ctl/main.cpp)
-target_link_libraries(ccsds-guard-ctl PRIVATE ccsds_guard)
+target_link_libraries(ccsds-guard-ctl PRIVATE
+    ccsds_guard
+    ${BLACKBOX_LIB}
+    ${XINFER_LIB}
+)
 
-# Latency Benchmark
+# Hardware Latency Benchmark (< 120 ns)
 add_executable(bench_latency benchmarks/bench_latency.cpp)
-target_link_libraries(bench_latency PRIVATE ccsds_guard)
+target_link_libraries(bench_latency PRIVATE
+    ccsds_guard
+    ${BLACKBOX_LIB}
+    ${XINFER_LIB}
+)
 
-# Tests
+# Test Suite
 enable_testing()
 add_executable(test_replay tests/test_replay_window.cpp)
-target_link_libraries(test_replay PRIVATE ccsds_guard)
+target_link_libraries(test_replay PRIVATE
+    ccsds_guard
+    ${BLACKBOX_LIB}
+    ${XINFER_LIB}
+)
 add_test(NAME TestReplay COMMAND test_replay)
 
 add_executable(test_stanag tests/test_stanag_validation.cpp)
-target_link_libraries(test_stanag PRIVATE ccsds_guard)
+target_link_libraries(test_stanag PRIVATE
+    ccsds_guard
+    ${BLACKBOX_LIB}
+    ${XINFER_LIB}
+)
 add_test(NAME TestStanag COMMAND test_stanag)
 
 # Installation Rules
@@ -85,6 +139,7 @@ install(TARGETS ccsds_guard ccsds_guard_static ccsds-guard-ctl
 
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
+# CMake Package Export Config
 set(CONFIG_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR}/cmake/CcsdsGuard)
 configure_package_config_file(
     cmake/CcsdsGuardConfig.cmake.in
@@ -108,6 +163,7 @@ install(EXPORT CcsdsGuardTargets
     DESTINATION ${CONFIG_INSTALL_DIR}
 )
 
+# PkgConfig export
 configure_file(
     cmake/ccsds_guard.pc.in
     ${CMAKE_CURRENT_BINARY_DIR}/ccsds_guard.pc
