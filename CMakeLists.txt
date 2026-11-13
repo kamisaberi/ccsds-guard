@@ -36,9 +36,13 @@ set(LIB_SOURCES
     src/pipeline/guard_engine.cpp
 )
 
+find_library(BLACKBOX_LIB NAMES blackbox blackbox_essential REQUIRED PATHS /usr/local/lib /usr/lib)
+find_library(XINFER_LIB NAMES xinfer REQUIRED PATHS /usr/local/lib /usr/lib)
+
 add_library(ccsds_guard SHARED ${LIB_SOURCES})
 add_library(ccsds_guard_static STATIC ${LIB_SOURCES})
 set_target_properties(ccsds_guard_static PROPERTIES OUTPUT_NAME ccsds_guard)
+
 
 target_include_directories(ccsds_guard PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
