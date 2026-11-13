@@ -1,0 +1,5 @@
+# File: /home/kami/ccsds-guard/cmake/CcsdsGuardConfig.cmake.in
+
+@PACKAGE_INIT@
+include("${CMAKE_CURRENT_LIST_DIR}/CcsdsGuardTargets.cmake")
+check_required_components(CcsdsGuard)
