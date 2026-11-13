@@ -1,0 +1,12 @@
+# File: /home/kami/ccsds-guard/cmake/ccsds_guard.pc.in
+
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
+includedir=${prefix}/@CMAKE_INSTALL_INCLUDEDIR@
+
+Name: ccsds_guard
+Description: Autonomous UAV Swarm Tactical Defense & Aerospace Telecommand Engine
+Version: @PROJECT_VERSION@
+Libs: -L${libdir} -lccsds_guard
+Cflags: -I${includedir}
