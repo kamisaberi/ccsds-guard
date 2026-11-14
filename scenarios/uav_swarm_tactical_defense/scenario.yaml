@@ -39,7 +39,7 @@ services:
       - "9443:9443"
       - "9444:9444"
     volumes:
-      - ./data/nexus_state.json:/opt/sentinel-nexus/data/nexus_state.json:rw
+      - ./data:/opt/sentinel-nexus/data:rw
       - ./configs:/opt/sentinel-nexus/configs:ro
       - ./models:/opt/sentinel-nexus/models
       - shared-datasets:/var/lib/sentinel-nexus/forge_datasets
