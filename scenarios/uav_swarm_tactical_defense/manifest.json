@@ -1,0 +1,19 @@
+{
+  "name": "uav_swarm_tactical_defense",
+  "slug": "uav_swarm_tactical_defense",
+  "title": "Autonomous UAV Swarm Tactical Defense & Telecommand Engine",
+  "version": "1.0.0",
+  "asset_type": "scenario",
+  "target_sector": "CRITICAL_INFRASTRUCTURE",
+  "sector": "AEROSPACE_DEFENSE",
+  "complexity": "ADVANCED",
+  "category": "AEROSPACE_UAV",
+  "author": "Aryorithm Technologies B.V.",
+  "description": "Tactical UAV Swarm telecommand defense simulating NATO STANAG 4586 and CCSDS 133 with anti-replay and GPS-spoofing mitigation.",
+  "author_public_key": "d9af7532a37ea3c9c6726adc47720910c44c5f827b408127ec3206c8fc99506c",
+  "dependencies": {
+    "models": [],
+    "pcaps": []
+  },
+  "compliance": ["NATO-STANAG-4586", "CCSDS-133.0-B-2"]
+}
