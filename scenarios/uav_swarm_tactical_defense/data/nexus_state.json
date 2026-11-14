@@ -1,0 +1,23 @@
+[
+  {
+    "node_id": "NODE-UAV-ALPHA",
+    "site": "Tactical-Aerospace-Swarm",
+    "hostname": "drone-alpha.matrix.internal",
+    "kernel": "6.8.0-aerospace-arm64",
+    "uuid": "uav-alpha-leader-uuid-001"
+  },
+  {
+    "node_id": "NODE-UAV-BRAVO",
+    "site": "Tactical-Aerospace-Swarm",
+    "hostname": "drone-bravo.matrix.internal",
+    "kernel": "6.8.0-aerospace-arm64",
+    "uuid": "uav-bravo-wingman-uuid-002"
+  },
+  {
+    "node_id": "NODE-UAV-CHARLIE",
+    "site": "Tactical-Aerospace-Swarm",
+    "hostname": "drone-charlie.matrix.internal",
+    "kernel": "6.8.0-aerospace-arm64",
+    "uuid": "uav-charlie-recon-uuid-003"
+  }
+]
