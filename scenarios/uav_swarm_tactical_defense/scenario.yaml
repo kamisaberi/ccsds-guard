@@ -25,19 +25,20 @@ services:
         ipv4_address: "10.240.50.120"
     command:
       - "python3"
+      - "-u"
       - "-c"
       - |
         import socket, time, struct
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         seq = 100
-        print('[GCS Transmitter] Streaming NATO STANAG 4586 C2 to UAV :50050...')
+        print('[GCS Transmitter] Streaming NATO STANAG 4586 C2 to UAV :50050...', flush=True)
         while True:
             now_us = int(time.time() * 1e6)
             # STANAG 4586 Header: MsgType(2), VehID(4), SeqID(4), Time_us(8), PayloadLen(2)
             pkt = struct.pack('>HIIQH12s', 0x1001, 1, seq, now_us, 12, b'STEER_WAYPT')
             sock.sendto(pkt, ('10.240.50.121', 50050))
             seq += 1
-            time.sleep(0.2)
+            time.sleep(0.5)
 
   # ============================================================================
   # 2. PROTECTED UAV FLIGHT CONTROLLER NODE (:50050)
@@ -54,14 +55,18 @@ services:
       - "50050:50050/udp"
     command:
       - "python3"
+      - "-u"
       - "-c"
       - |
-        import socket
+        import socket, struct
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind(('0.0.0.0', 50050))
-        print('[UAV Flight Controller] Armed. Ingesting protected telecommands on UDP :50050...')
+        print('[UAV Flight Controller] Armed. Ingesting protected telecommands on UDP :50050...', flush=True)
         while True:
             data, addr = sock.recvfrom(2048)
+            if len(data) >= 20:
+                msg_type, veh_id, seq_id = struct.unpack('>HII', data[:10])
+                print(f'[UAV Flight Controller] Ingested frame from {addr[0]}:{addr[1]} | MsgType=0x{msg_type:04X} VehID={veh_id} Seq={seq_id}', flush=True)
 
   # ============================================================================
   # 3. ELECTRONIC WARFARE ADVERSARY (Replay & GPS Kinematic Injections)
@@ -76,15 +81,16 @@ services:
         ipv4_address: "10.240.50.122"
     command:
       - "python3"
+      - "-u"
       - "-c"
       - |
         import socket, time, struct
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         time.sleep(2)
-        print('[EW Adversary] Injecting telecommand replays and GPS drift...')
+        print('[EW Adversary] Injecting telecommand replays and GPS drift...', flush=True)
         while True:
             now_us = int(time.time() * 1e6)
             # Replay Attack: Reusing stale sequence ID 100
             replayed = struct.pack('>HIIQH12s', 0x1001, 1, 100, now_us, 12, b'REPLAY_ATTK')
             sock.sendto(replayed, ('10.240.50.121', 50050))
-            time.sleep(0.5)
+            time.sleep(1.0)
