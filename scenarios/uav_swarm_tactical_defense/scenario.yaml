@@ -39,6 +39,7 @@ services:
       - "9443:9443"
       - "9444:9444"
     volumes:
+      - ./data/nexus_state.json:/opt/sentinel-nexus/data/nexus_state.json:rw
       - ./configs:/opt/sentinel-nexus/configs:ro
       - ./models:/opt/sentinel-nexus/models
       - shared-datasets:/var/lib/sentinel-nexus/forge_datasets
@@ -84,7 +85,6 @@ services:
         while True:
             for vid in swarm_vehicles:
                 now_us = int(time.time() * 1e6)
-                # STANAG 4586 Header: MsgType(2), VehID(4), SeqID(4), Time_us(8), PayloadLen(2)
                 pkt = struct.pack('>HIIQH12s', 0x1001, vid, seq, now_us, 12, b'STEER_WAYPT')
                 sock.sendto(pkt, ('10.240.50.121', 50050))
                 seq += 1
@@ -96,7 +96,7 @@ services:
   uav-alpha:
     image: python:3.11-slim
     container_name: matrix-uav-alpha
-    hostname: uav-alpha.matrix.internal
+    hostname: drone-alpha.matrix.internal
     restart: unless-stopped
     depends_on:
       nexus:
