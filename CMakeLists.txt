@@ -211,3 +211,15 @@ configure_file(
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/ccsds_guard.pc
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig
 )
+
+
+add_executable(test_plugin tests/test_sentinel_plugin.cpp)
+target_link_libraries(test_plugin PRIVATE
+    ccsds_guard
+    -Wl,--no-as-needed
+    ${BLACKBOX_LIB}
+    ${XINFER_LIB}
+    -Wl,--as-needed
+    ${CMAKE_DL_LIBS}
+)
+add_test(NAME TestSentinelPlugin COMMAND test_plugin)
