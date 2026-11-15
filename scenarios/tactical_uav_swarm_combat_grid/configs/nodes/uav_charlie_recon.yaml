@@ -1,5 +1,3 @@
-# File: /home/kami/ccsds-guard/scenarios/tactical_uav_swarm_combat_grid/configs/nodes/uav_charlie_recon.yaml
-
 node:
   identifier: "UAV-CHARLIE-RECON"
   site_identifier: "Tactical-Combat-Airspace"
@@ -7,6 +5,23 @@ node:
     type: "DEVICE_VIRTUAL_TPM"
     primary_backend: "CPU_AVX512"
     xdp_driver_mode: "SKB"
+
+# Inherits aerospace_uav base, overrides title & appends FLIR recon gimbal
+ui_profile:
+  template: "aerospace_uav"
+  overrides:
+    instrument_title: "TACTICAL FLIR RECON GIMBAL & OPTICAL RADAR (CHARLIE)"
+    instrument_type: "video"
+    sensors_add:
+      - sensor_id: "flir_thermal_gimbal"
+        name: "Optical Thermal Recon Gimbal"
+        category: "TEMPERATURE"
+        port: 8554
+        unit: "°C"
+        baseline: 38.5
+    attacks_add:
+      - id: "laser_sensor_dazzle"
+        name: "[!] INJECT OPTICAL SENSOR BLINDING"
 
 nexus:
   enabled: true
