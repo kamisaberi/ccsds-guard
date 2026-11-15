@@ -165,3 +165,9 @@ distclean: clean
 	@$(MAKE) sim-down >/dev/null 2>&1 || true
 	@rm -rf $(MATRIX_DIR)/.matrix_cache/docker-compose.uav_swarm_tactical_defense.yml
 	@echo -e "$(GREEN)[+] Deep clean complete.$(RESET)"
+
+vendor-3d:
+	@echo -e "$(CYAN)[+] Downloading standalone air-gapped Three.js build into ccsds-guard/web/vendor/...$(RESET)"
+	@mkdir -p web/vendor
+	@curl -sSL https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js -o web/vendor/three.min.js
+	@echo -e "$(GREEN)[+] Download Complete ($$(ls -lh web/vendor/three.min.js | awk '{print $$5}')). 100% Air-Gapped Ready.$(RESET)"
