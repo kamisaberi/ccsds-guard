@@ -175,6 +175,22 @@ int main(int argc, char *argv[])
         std::cout << "[aryo-aerospace] Actuator Air-Gap Tripped: " << (engine.is_airgap_tripped() ? "YES (LATCHED)" : "NO (ARMED)") << "\n";
         return 0;
     }
+    // -------------------------------------------------------------------------
+    // NEW MULTI-NODE SWARM COMBAT GRID (3 SENTRY APPLIANCES)
+    // -------------------------------------------------------------------------
+    if (action == "sim-combat-grid")
+    {
+        std::cout << "[aryo-aerospace] Launching 3-Node Autonomous Swarm Combat Grid...\n";
+        std::string cmd = "python3 /home/kami/sentinel-matrix/tools/scenario_engine.py load /home/kami/ccsds-guard/scenarios/tactical_uav_swarm_combat_grid";
+        return std::system(cmd.c_str());
+    }
+
+    if (action == "sim-combat-grid-down")
+    {
+        std::cout << "[aryo-aerospace] Tearing down Swarm Combat Grid...\n";
+        std::string cmd = "python3 /home/kami/sentinel-matrix/tools/scenario_engine.py down --name tactical_uav_swarm_combat_grid";
+        return std::system(cmd.c_str());
+    }
 
     std::cerr << "[-] Error: Unknown aerospace action '" << action << "'. Run 'aryo aerospace --help'.\n";
     return 1;
