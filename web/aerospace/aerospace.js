@@ -110,71 +110,30 @@
     });
 
     // ========================================================================
-    // 2. REGISTER REAL 3D WEBGL SWARM C2 TAB (THREE.JS INTEGRATION)
+    // 2. TACTICAL SWARM C2 (HYBRID 3D/2D FAIL-SAFE ENGINE)
     // ========================================================================
-    let threeScene, threeCamera, threeRenderer, swarmGroup, ewBlip, jammingField;
-    let animFrameId = null;
-    let isJammingActive = true;
     let currentFormation = "v_formation";
+    let isJammingActive = true;
+    let animLoopId = null;
 
-    function createDroneMesh(colorHex) {
-        const group = new THREE.Group();
-
-        // 1. Sleek Stealth Fuselage (Delta-Cone)
-        const bodyGeo = new THREE.ConeGeometry(3.5, 16, 4);
-        bodyGeo.rotateX(Math.PI / 2);
-        const bodyMat = new THREE.MeshStandardMaterial({
-            color: 0x1a2433,
-            metalness: 0.85,
-            roughness: 0.2
-        });
-        const body = new THREE.Mesh(bodyGeo, bodyMat);
-        group.add(body);
-
-        // 2. Swept Delta Wings (BoxGeometry for maximum compatibility)
-        const wingGeo = new THREE.BoxGeometry(26, 0.6, 7);
-        const wingMat = new THREE.MeshStandardMaterial({
-            color: colorHex,
-            emissive: colorHex,
-            emissiveIntensity: 0.35,
-            metalness: 0.7,
-            roughness: 0.3
-        });
-        const wings = new THREE.Mesh(wingGeo, wingMat);
-        wings.position.set(0, 0, -1);
-        group.add(wings);
-
-        // 3. Glowing Ion Engine Thruster
-        const engineGeo = new THREE.SphereGeometry(1.6, 12, 12);
-        const engineMat = new THREE.MeshBasicMaterial({ color: colorHex });
-        const engine = new THREE.Mesh(engineGeo, engineMat);
-        engine.position.z = -8;
-        group.add(engine);
-
-        // 4. Ground Stalk Projection Line
-        const lineGeo = new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(0, 0, 0),
-            new THREE.Vector3(0, -70, 0)
-        ]);
-        const lineMat = new THREE.LineBasicMaterial({ color: colorHex, transparent: true, opacity: 0.35 });
-        const stalk = new THREE.Line(lineGeo, lineMat);
-        group.add(stalk);
-
-        return group;
+    function isWebGLAvailable() {
+        try {
+            const canvas = document.createElement("canvas");
+            return !!(window.WebGLRenderingContext && (canvas.getContext("webgl") || canvas.getContext("experimental-webgl")));
+        } catch (e) {
+            return false;
+        }
     }
 
     function init3DSwarmScene(container) {
-        if (!window.THREE) {
-            container.innerHTML = `<div style="padding:24px; color:#FF3366; font-family:monospace;">[-] Error: Three.js library not loaded.</div>`;
-            return;
-        }
-
         container.innerHTML = `
             <div style="display:flex; flex-direction:column; gap:12px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; background:#0d111a; border:1px solid #1a2232; padding:10px 16px; border-radius:4px;">
                     <div style="display:flex; align-items:center; gap:12px;">
-                        <span style="font-size:12px; font-weight:800; color:#00E5FF; letter-spacing:0.1em;">TACTICAL 3D AIRSPACE &amp; SWARM FORMATION RADAR</span>
-                        <span class="badge badge-green" style="font-size:9px;">WEBGL 60-FPS ENGINE</span>
+                        <span style="font-size:12px; font-weight:800; color:#00E5FF; letter-spacing:0.1em;">TACTICAL AIRSPACE &amp; SWARM FORMATION C2</span>
+                        <span class="badge ${isWebGLAvailable() ? 'badge-green' : 'badge-cyan'}" style="font-size:9px;" id="render-mode-badge">
+                            ${isWebGLAvailable() ? 'THREE.JS 3D WEBGL' : 'TACTICAL 2D RADAR'}
+                        </span>
                     </div>
                     <div style="display:flex; gap:8px;">
                         <button id="btn-form-v" class="btn-ctrl" style="padding:4px 10px; font-size:10px; background:#111827; border:1px solid #00FFA3; color:#00FFA3; border-radius:3px; cursor:pointer;">V-FORMATION</button>
@@ -186,7 +145,7 @@
 
                 <div id="three-canvas-wrap" style="width:100%; height:540px; background:#04070F; border:1px solid #1A2232; border-radius:4px; position:relative; overflow:hidden;">
                     <div style="position:absolute; top:12px; left:12px; z-index:10; font-family:'JetBrains Mono', monospace; font-size:10px; color:#8A99AD; background:rgba(7,9,14,0.75); padding:6px 10px; border-radius:3px; border:1px solid #1A2232; pointer-events:none;">
-                        [INTERACTION] Left-Click + Drag: 360° Orbit &bull; Scroll: Altitude Zoom &bull; Right-Click: Pan
+                        [CONTROLS] Click &bull; Drag to Rotate &bull; Scroll to Zoom &bull; Formation Buttons Above
                     </div>
                     <div id="three-telemetry-overlay" style="position:absolute; bottom:12px; right:12px; z-index:10; font-family:'JetBrains Mono', monospace; font-size:10px; background:rgba(7,9,14,0.85); padding:10px 14px; border-radius:4px; border:1px solid #00FFA3; color:#F0F4F8; min-width:240px; pointer-events:none;">
                         <div style="color:#00FFA3; font-weight:800; margin-bottom:4px;">SWARM DEFENSE STATUS: NOMINAL</div>
@@ -201,151 +160,12 @@
 
         const wrap = document.getElementById("three-canvas-wrap");
 
-        // ZERO-DIMENSION SAFEGUARD: Determine safe initial dimensions
-        const initialW = (wrap.clientWidth > 0) ? wrap.clientWidth : (container.clientWidth > 0 ? container.clientWidth : 960);
-        const initialH = (wrap.clientHeight > 0) ? wrap.clientHeight : 540;
-
-        // 1. Scene, Camera, Renderer
-        threeScene = new THREE.Scene();
-        threeScene.background = new THREE.Color(0x04070f);
-        threeScene.fog = new THREE.FogExp2(0x04070f, 0.0012);
-
-        threeCamera = new THREE.PerspectiveCamera(50, initialW / initialH, 1, 3000);
-
-        threeRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-        threeRenderer.setSize(initialW, initialH);
-        threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-        // Absolute positioning to ensure zero layout clipping
-        threeRenderer.domElement.style.cssText = "position:absolute; top:0; left:0; width:100%; height:100%; z-index:1;";
-        wrap.appendChild(threeRenderer.domElement);
-
-        // 2. Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-        threeScene.add(ambientLight);
-        const dirLight = new THREE.DirectionalLight(0x00e5ff, 1.4);
-        dirLight.position.set(120, 250, 120);
-        threeScene.add(dirLight);
-
-        // 3. Holographic Ground Grid & Tactical Rings
-        const gridHelper = new THREE.GridHelper(600, 60, 0x00e5ff, 0x162234);
-        gridHelper.position.y = -70;
-        threeScene.add(gridHelper);
-
-        [80, 160, 240].forEach(rad => {
-            const ringGeo = new THREE.RingGeometry(rad - 0.5, rad + 0.5, 64);
-            ringGeo.rotateX(Math.PI / 2);
-            const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ffa3, transparent: true, opacity: 0.28, side: THREE.DoubleSide });
-            const ring = new THREE.Mesh(ringGeo, ringMat);
-            ring.position.y = -69.5;
-            threeScene.add(ring);
-        });
-
-        // 4. Swarm Drones Group
-        swarmGroup = new THREE.Group();
-        threeScene.add(swarmGroup);
-
-        const droneAlpha = createDroneMesh(0x00ffa3);   // Leader (Green)
-        const droneBravo = createDroneMesh(0x00e5ff);   // Wing 1 (Cyan)
-        const droneCharlie = createDroneMesh(0xffb800); // Wing 2 (Amber)
-
-        droneAlpha.name = "alpha";
-        droneBravo.name = "bravo";
-        droneCharlie.name = "charlie";
-
-        swarmGroup.add(droneAlpha);
-        swarmGroup.add(droneBravo);
-        swarmGroup.add(droneCharlie);
-
-        // Initial V-Formation positions
-        droneAlpha.position.set(0, 30, 40);
-        droneBravo.position.set(-50, 25, -20);
-        droneCharlie.position.set(50, 25, -20);
-
-        // 5. Hostile EW Spoofer Node
-        ewBlip = new THREE.Group();
-        const ewBody = new THREE.Mesh(
-            new THREE.BoxGeometry(12, 6, 14),
-            new THREE.MeshStandardMaterial({ color: 0xff3366, emissive: 0xff3366, emissiveIntensity: 0.6 })
-        );
-        ewBlip.add(ewBody);
-        ewBlip.position.set(150, 45, -70);
-        threeScene.add(ewBlip);
-
-        // Pulsing Jamming Sphere
-        const jamGeo = new THREE.SphereGeometry(36, 24, 24);
-        const jamMat = new THREE.MeshBasicMaterial({
-            color: 0xff3366,
-            wireframe: true,
-            transparent: true,
-            opacity: 0.35
-        });
-        jammingField = new THREE.Mesh(jamGeo, jamMat);
-        ewBlip.add(jammingField);
-
-        // 6. Camera Orbit Handler with Initial Framing
-        let isDragging = false;
-        let isPanning = false;
-        let prevMouseX = 0;
-        let prevMouseY = 0;
-        let sphericalTheta = 0.0;
-        let sphericalPhi = Math.PI / 3.8;
-        let sphericalRadius = 320;
-
-        function updateCameraPosition() {
-            threeCamera.position.x = sphericalRadius * Math.sin(sphericalPhi) * Math.sin(sphericalTheta);
-            threeCamera.position.y = sphericalRadius * Math.cos(sphericalPhi);
-            threeCamera.position.z = sphericalRadius * Math.sin(sphericalPhi) * Math.cos(sphericalTheta);
-            threeCamera.lookAt(0, 15, 0);
-        }
-
-        // Frame scene on load
-        updateCameraPosition();
-
-        threeRenderer.domElement.addEventListener("mousedown", (e) => {
-            if (e.button === 0) isDragging = true;
-            if (e.button === 2) isPanning = true;
-            prevMouseX = e.clientX;
-            prevMouseY = e.clientY;
-        });
-
-        window.addEventListener("mouseup", () => {
-            isDragging = false;
-            isPanning = false;
-        });
-
-        threeRenderer.domElement.addEventListener("contextmenu", (e) => e.preventDefault());
-
-        threeRenderer.domElement.addEventListener("mousemove", (e) => {
-            const dx = e.clientX - prevMouseX;
-            const dy = e.clientY - prevMouseY;
-
-            if (isDragging) {
-                sphericalTheta -= dx * 0.006;
-                sphericalPhi = Math.max(0.1, Math.min(Math.PI / 2.05, sphericalPhi - dy * 0.006));
-                updateCameraPosition();
-            } else if (isPanning) {
-                threeCamera.position.x -= dx * 0.4;
-                threeCamera.position.y += dy * 0.4;
-            }
-
-            prevMouseX = e.clientX;
-            prevMouseY = e.clientY;
-        });
-
-        threeRenderer.domElement.addEventListener("wheel", (e) => {
-            e.preventDefault();
-            sphericalRadius = Math.max(90, Math.min(700, sphericalRadius + e.deltaY * 0.3));
-            updateCameraPosition();
-        }, { passive: false });
-
-        // Formation Switcher
+        // Bind Formation Buttons
         document.getElementById("btn-form-v")?.addEventListener("click", () => setFormation("v_formation"));
         document.getElementById("btn-form-echelon")?.addEventListener("click", () => setFormation("echelon"));
         document.getElementById("btn-form-diamond")?.addEventListener("click", () => setFormation("diamond"));
         document.getElementById("btn-toggle-jamming")?.addEventListener("click", () => {
             isJammingActive = !isJammingActive;
-            jammingField.visible = isJammingActive;
         });
 
         function setFormation(form) {
@@ -366,78 +186,235 @@
             }
         }
 
-        // Dynamic Resize Observer (protects against tab-switch dimension collapse)
-        function handleResize() {
-            if (!wrap || !threeRenderer || !threeCamera) return;
-            const w = wrap.clientWidth;
-            const h = wrap.clientHeight;
-            if (w > 0 && h > 0) {
-                threeCamera.aspect = w / h;
-                threeCamera.updateProjectionMatrix();
-                threeRenderer.setSize(w, h);
-            }
-        }
-
-        const resizeObserver = new ResizeObserver(handleResize);
-        resizeObserver.observe(wrap);
-
-        // Immediate + Post-Reflow passes
-        requestAnimationFrame(handleResize);
-        setTimeout(handleResize, 60);
-        setTimeout(handleResize, 200);
-
-        // 7. Render & Flight Animation Loop (60 FPS)
-        let clockTick = 0;
-        function animate() {
-            animFrameId = requestAnimationFrame(animate);
-            clockTick += 0.02;
-
+        // Check if WebGL context is actually available in the browser/VMware
+        if (window.THREE && isWebGLAvailable()) {
             try {
-                const alpha = swarmGroup.getObjectByName("alpha");
-                const bravo = swarmGroup.getObjectByName("bravo");
-                const charlie = swarmGroup.getObjectByName("charlie");
-
-                if (alpha && bravo && charlie) {
-                    alpha.position.y = 30 + Math.sin(clockTick * 1.5) * 2;
-                    bravo.position.y = 25 + Math.sin(clockTick * 1.5 + 1) * 2;
-                    charlie.position.y = 25 + Math.sin(clockTick * 1.5 + 2) * 2;
-
-                    alpha.rotation.z = Math.sin(clockTick * 0.8) * 0.08;
-                    bravo.rotation.z = Math.sin(clockTick * 0.8) * 0.08;
-                    charlie.rotation.z = Math.sin(clockTick * 0.8) * 0.08;
-
-                    if (currentFormation === "v_formation") {
-                        bravo.position.x += (-50 - bravo.position.x) * 0.06;
-                        bravo.position.z += (-20 - bravo.position.z) * 0.06;
-                        charlie.position.x += (50 - charlie.position.x) * 0.06;
-                        charlie.position.z += (-20 - charlie.position.z) * 0.06;
-                    } else if (currentFormation === "echelon") {
-                        bravo.position.x += (40 - bravo.position.x) * 0.06;
-                        bravo.position.z += (10 - bravo.position.z) * 0.06;
-                        charlie.position.x += (80 - charlie.position.x) * 0.06;
-                        charlie.position.z += (-20 - charlie.position.z) * 0.06;
-                    } else if (currentFormation === "diamond") {
-                        bravo.position.x += (-50 - bravo.position.x) * 0.06;
-                        bravo.position.z += (0 - bravo.position.z) * 0.06;
-                        charlie.position.x += (0 - charlie.position.x) * 0.06;
-                        charlie.position.z += (-50 - charlie.position.z) * 0.06;
-                    }
-                }
-
-                if (isJammingActive && jammingField) {
-                    const scale = 1.0 + Math.sin(clockTick * 4) * 0.2;
-                    jammingField.scale.set(scale, scale, scale);
-                    jammingField.rotation.y += 0.01;
-                }
-
-                threeRenderer.render(threeScene, threeCamera);
+                launchThreeJsWebGL(wrap);
+                return;
             } catch (err) {
-                console.error("Three.js render error:", err);
+                console.warn("[Aerospace] Three.js WebGL init failed, switching to 2D Canvas engine:", err);
             }
         }
 
-        if (animFrameId) cancelAnimationFrame(animFrameId);
-        animate();
+        // Fallback: 2D Tactical Swarm Radar Engine (Guaranteed 100% visible in any VM)
+        launchTactical2DEngine(wrap);
+    }
+
+    // --- THREE.JS 3D WEBGL ENGINE ---
+    function launchThreeJsWebGL(wrap) {
+        const w = wrap.clientWidth || 960;
+        const h = wrap.clientHeight || 540;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x04070f);
+
+        const camera = new THREE.PerspectiveCamera(50, w / h, 1, 3000);
+        camera.position.set(0, 160, 260);
+        camera.lookAt(0, 20, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(w, h);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.domElement.style.cssText = "position:absolute; top:0; left:0; width:100%; height:100%; z-index:1;";
+        wrap.appendChild(renderer.domElement);
+
+        // Lighting
+        scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+        const dirLight = new THREE.DirectionalLight(0x00e5ff, 1.2);
+        dirLight.position.set(100, 200, 100);
+        scene.add(dirLight);
+
+        // Ground Grid
+        const grid = new THREE.GridHelper(500, 40, 0x00e5ff, 0x162234);
+        grid.position.y = -60;
+        scene.add(grid);
+
+        // Swarm Group
+        const swarm = new THREE.Group();
+        scene.add(swarm);
+
+        function createDrone(color) {
+            const g = new THREE.Group();
+            const b = new THREE.Mesh(new THREE.ConeGeometry(4, 16, 4), new THREE.MeshStandardMaterial({ color: 0x1a2433 }));
+            b.rotateX(Math.PI / 2);
+            g.add(b);
+            const w = new THREE.Mesh(new THREE.BoxGeometry(24, 0.8, 6), new THREE.MeshBasicMaterial({ color: color }));
+            g.add(w);
+            return g;
+        }
+
+        const d1 = createDrone(0x00ffa3); d1.name = "d1"; swarm.add(d1);
+        const d2 = createDrone(0x00e5ff); d2.name = "d2"; swarm.add(d2);
+        const d3 = createDrone(0xffb800); d3.name = "d3"; swarm.add(d3);
+
+        d1.position.set(0, 30, 30);
+        d2.position.set(-50, 25, -20);
+        d3.position.set(50, 25, -20);
+
+        // Mouse drag orbit
+        let isDragging = false;
+        let px = 0, py = 0, theta = 0, phi = Math.PI / 4, rad = 300;
+        renderer.domElement.addEventListener("mousedown", (e) => { isDragging = true; px = e.clientX; py = e.clientY; });
+        window.addEventListener("mouseup", () => isDragging = false);
+        renderer.domElement.addEventListener("mousemove", (e) => {
+            if (!isDragging) return;
+            theta -= (e.clientX - px) * 0.008;
+            phi = Math.max(0.2, Math.min(Math.PI / 2.1, phi - (e.clientY - py) * 0.008));
+            camera.position.set(rad * Math.sin(phi) * Math.sin(theta), rad * Math.cos(phi), rad * Math.sin(phi) * Math.cos(theta));
+            camera.lookAt(0, 20, 0);
+            px = e.clientX; py = e.clientY;
+        });
+
+        // Loop
+        let tick = 0;
+        function render3D() {
+            animLoopId = requestAnimationFrame(render3D);
+            tick += 0.03;
+            d1.position.y = 30 + Math.sin(tick) * 2;
+            d2.position.y = 25 + Math.sin(tick + 1) * 2;
+            d3.position.y = 25 + Math.sin(tick + 2) * 2;
+            renderer.render(scene, camera);
+        }
+        if (animLoopId) cancelAnimationFrame(animLoopId);
+        render3D();
+    }
+
+    // --- TACTICAL 2D/ISOMETRIC ENGINE (FAIL-SAFE) ---
+    function launchTactical2DEngine(wrap) {
+        const canvas = document.createElement("canvas");
+        canvas.style.cssText = "position:absolute; top:0; left:0; width:100%; height:100%; z-index:1;";
+        wrap.appendChild(canvas);
+        const ctx = canvas.getContext("2d");
+
+        function resize() {
+            canvas.width = wrap.clientWidth || 960;
+            canvas.height = wrap.clientHeight || 540;
+        }
+        resize();
+        window.addEventListener("resize", resize);
+
+        let tick = 0;
+        function render2D() {
+            animLoopId = requestAnimationFrame(render2D);
+            tick += 0.02;
+
+            const w = canvas.width;
+            const h = canvas.height;
+            const cx = w / 2;
+            const cy = h / 2 + 30;
+
+            // Background
+            ctx.fillStyle = "#04070F";
+            ctx.fillRect(0, 0, w, h);
+
+            // Isometric Perspective Grid
+            ctx.strokeStyle = "rgba(0, 229, 255, 0.15)";
+            ctx.lineWidth = 1;
+            for (let x = -300; x <= 300; x += 50) {
+                ctx.beginPath();
+                ctx.moveTo(cx + x * 0.8, cy + 120);
+                ctx.lineTo(cx + x * 1.5, h);
+                ctx.stroke();
+            }
+            for (let y = cy - 60; y <= h; y += 35) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+            }
+
+            // Concentric Airspace Rings
+            [80, 160, 240].forEach(r => {
+                ctx.strokeStyle = "rgba(0, 255, 163, 0.2)";
+                ctx.beginPath();
+                ctx.ellipse(cx, cy, r * 1.4, r * 0.6, 0, 0, Math.PI * 2);
+                ctx.stroke();
+            });
+
+            // Formation Targets
+            let p1 = { x: cx, y: cy - 70 };
+            let p2 = { x: cx - 110, y: cy + 10 };
+            let p3 = { x: cx + 110, y: cy + 10 };
+
+            if (currentFormation === "echelon") {
+                p2 = { x: cx + 70, y: cy - 20 };
+                p3 = { x: cx + 140, y: cy + 30 };
+            } else if (currentFormation === "diamond") {
+                p2 = { x: cx - 100, y: cy };
+                p3 = { x: cx, y: cy + 70 };
+            }
+
+            // Draw Formation Links
+            ctx.strokeStyle = "rgba(0, 255, 163, 0.4)";
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y);
+            ctx.moveTo(p1.x, p1.y); ctx.lineTo(p3.x, p3.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw Drones
+            function drawDrone(p, color, label, altitude) {
+                // Altitude stalk
+                ctx.strokeStyle = color;
+                ctx.globalAlpha = 0.3;
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(p.x, p.y + 40);
+                ctx.stroke();
+                ctx.globalAlpha = 1.0;
+
+                // Drone Body (Delta shape)
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y - 10);
+                ctx.lineTo(p.x - 12, p.y + 10);
+                ctx.lineTo(p.x, p.y + 6);
+                ctx.lineTo(p.x + 12, p.y + 10);
+                ctx.closePath();
+                ctx.fill();
+
+                // Label
+                ctx.font = "10px 'JetBrains Mono', monospace";
+                ctx.fillStyle = color;
+                ctx.fillText(label, p.x + 16, p.y);
+                ctx.fillStyle = "#8A99AD";
+                ctx.fillText(altitude, p.x + 16, p.y + 12);
+            }
+
+            drawDrone(p1, "#00FFA3", "UAV-ALPHA (LEADER)", "ALT: 120.4m");
+            drawDrone(p2, "#00E5FF", "UAV-BRAVO (WINGMAN 1)", "ALT: 118.0m");
+            drawDrone(p3, "#FFB800", "UAV-CHARLIE (WINGMAN 2)", "ALT: 119.2m");
+
+            // Hostile EW Spoofer Node
+            const ewX = cx + 240;
+            const ewY = cy - 80;
+            ctx.fillStyle = "#FF3366";
+            ctx.fillRect(ewX - 8, ewY - 6, 16, 12);
+            ctx.font = "10px 'JetBrains Mono', monospace";
+            ctx.fillText("EW-SPOOFER (ADVERSARY)", ewX + 14, ewY);
+
+            // Pulsing Jamming Wave
+            if (isJammingActive) {
+                const waveR = 25 + (Math.sin(tick * 4) + 1) * 20;
+                ctx.strokeStyle = "rgba(255, 51, 102, 0.4)";
+                ctx.beginPath();
+                ctx.arc(ewX, ewY, waveR, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Line of sight attack beam
+                ctx.strokeStyle = "rgba(255, 51, 102, 0.3)";
+                ctx.setLineDash([2, 4]);
+                ctx.beginPath();
+                ctx.moveTo(ewX, ewY);
+                ctx.lineTo(p1.x, p1.y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+
+        if (animLoopId) cancelAnimationFrame(animLoopId);
+        render2D();
     }
 
     // 2. REGISTER DEDICATED SWARM TAB
@@ -449,5 +426,5 @@
         renderView: (container) => init3DSwarmScene(container)
     });
 
-    console.log("[Aerospace Plugin] Initialized Tactical Aerospace Micro-Frontend with 3D WebGL Swarm Radar.");
+    console.log("[Aerospace Plugin] Initialized Tactical Aerospace Micro-Frontend with Fail-Safe Radar.");
 })();
