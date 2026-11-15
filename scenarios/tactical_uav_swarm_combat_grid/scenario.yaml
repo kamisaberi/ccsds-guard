@@ -1,0 +1,143 @@
+# ============================================================================
+  # ISOLATED PYTHON SENSOR CONTAINERS (UAV ALPHA SENSORS)
+  # ============================================================================
+  sensor-alpha-gnss:
+    image: python:3.11-slim
+    container_name: matrix-alpha-s023
+    restart: unless-stopped
+    networks:
+      swarm-combat-net: { ipv4_address: "10.240.52.141" }
+    volumes:
+      - ./tools/sensor_daemon.py:/app/sensor.py:ro
+    environment:
+      SENSOR_ID: "ALPHA_S023_GNSS"
+      SENSOR_NAME: "GNSS C/N0 Anti-Spoofing Monitor"
+      SENSOR_UNIT: "dBm"
+      SENSOR_BASELINE: "-85.0"
+    command: ["python3", "-u", "/app/sensor.py"]
+
+  sensor-alpha-imu:
+    image: python:3.11-slim
+    container_name: matrix-alpha-s050
+    restart: unless-stopped
+    networks:
+      swarm-combat-net: { ipv4_address: "10.240.52.142" }
+    volumes:
+      - ./tools/sensor_daemon.py:/app/sensor.py:ro
+    environment:
+      SENSOR_ID: "ALPHA_S050_IMU"
+      SENSOR_NAME: "3-Axis MEMS Flight Gyro & Accel"
+      SENSOR_UNIT: "deg/s"
+      SENSOR_BASELINE: "12.4"
+    command: ["python3", "-u", "/app/sensor.py"]
+
+  sensor-alpha-pitot:
+    image: python:3.11-slim
+    container_name: matrix-alpha-s092
+    restart: unless-stopped
+    networks:
+      swarm-combat-net: { ipv4_address: "10.240.52.143" }
+    volumes:
+      - ./tools/sensor_daemon.py:/app/sensor.py:ro
+    environment:
+      SENSOR_ID: "ALPHA_S092_PITOT"
+      SENSOR_NAME: "Heated Pitot-Static Airspeed Probe"
+      SENSOR_UNIT: "knots"
+      SENSOR_BASELINE: "118.0"
+    command: ["python3", "-u", "/app/sensor.py"]
+
+  # ============================================================================
+  # ISOLATED PYTHON SENSOR CONTAINERS (UAV BRAVO SENSORS)
+  # ============================================================================
+  sensor-bravo-gnss:
+    image: python:3.11-slim
+    container_name: matrix-bravo-s023
+    restart: unless-stopped
+    networks:
+      swarm-combat-net: { ipv4_address: "10.240.52.144" }
+    volumes:
+      - ./tools/sensor_daemon.py:/app/sensor.py:ro
+    environment:
+      SENSOR_ID: "BRAVO_S023_GNSS"
+      SENSOR_NAME: "GNSS C/N0 Anti-Spoofing Monitor"
+      SENSOR_UNIT: "dBm"
+      SENSOR_BASELINE: "-85.0"
+    command: ["python3", "-u", "/app/sensor.py"]
+
+  sensor-bravo-imu:
+    image: python:3.11-slim
+    container_name: matrix-bravo-s050
+    restart: unless-stopped
+    networks:
+      swarm-combat-net: { ipv4_address: "10.240.52.145" }
+    volumes:
+      - ./tools/sensor_daemon.py:/app/sensor.py:ro
+    environment:
+      SENSOR_ID: "BRAVO_S050_IMU"
+      SENSOR_NAME: "3-Axis MEMS Flight Gyro & Accel"
+      SENSOR_UNIT: "deg/s"
+      SENSOR_BASELINE: "12.4"
+    command: ["python3", "-u", "/app/sensor.py"]
+
+  sensor-bravo-pitot:
+    image: python:3.11-slim
+    container_name: matrix-bravo-s092
+    restart: unless-stopped
+    networks:
+      swarm-combat-net: { ipv4_address: "10.240.52.146" }
+    volumes:
+      - ./tools/sensor_daemon.py:/app/sensor.py:ro
+    environment:
+      SENSOR_ID: "BRAVO_S092_PITOT"
+      SENSOR_NAME: "Heated Pitot-Static Airspeed Probe"
+      SENSOR_UNIT: "knots"
+      SENSOR_BASELINE: "118.0"
+    command: ["python3", "-u", "/app/sensor.py"]
+
+  # ============================================================================
+  # ISOLATED PYTHON SENSOR CONTAINERS (UAV CHARLIE SENSORS)
+  # ============================================================================
+  sensor-charlie-gnss:
+    image: python:3.11-slim
+    container_name: matrix-charlie-s023
+    restart: unless-stopped
+    networks:
+      swarm-combat-net: { ipv4_address: "10.240.52.147" }
+    volumes:
+      - ./tools/sensor_daemon.py:/app/sensor.py:ro
+    environment:
+      SENSOR_ID: "CHARLIE_S023_GNSS"
+      SENSOR_NAME: "GNSS C/N0 Anti-Spoofing Monitor"
+      SENSOR_UNIT: "dBm"
+      SENSOR_BASELINE: "-85.0"
+    command: ["python3", "-u", "/app/sensor.py"]
+
+  sensor-charlie-imu:
+    image: python:3.11-slim
+    container_name: matrix-charlie-s050
+    restart: unless-stopped
+    networks:
+      swarm-combat-net: { ipv4_address: "10.240.52.148" }
+    volumes:
+      - ./tools/sensor_daemon.py:/app/sensor.py:ro
+    environment:
+      SENSOR_ID: "CHARLIE_S050_IMU"
+      SENSOR_NAME: "3-Axis MEMS Flight Gyro & Accel"
+      SENSOR_UNIT: "deg/s"
+      SENSOR_BASELINE: "12.4"
+    command: ["python3", "-u", "/app/sensor.py"]
+
+  sensor-charlie-lidar:
+    image: python:3.11-slim
+    container_name: matrix-charlie-s098
+    restart: unless-stopped
+    networks:
+      swarm-combat-net: { ipv4_address: "10.240.52.149" }
+    volumes:
+      - ./tools/sensor_daemon.py:/app/sensor.py:ro
+    environment:
+      SENSOR_ID: "CHARLIE_S098_LIDAR"
+      SENSOR_NAME: "Laser Altimeter LiDAR Rangefinder"
+      SENSOR_UNIT: "m"
+      SENSOR_BASELINE: "120.4"
+    command: ["python3", "-u", "/app/sensor.py"]
