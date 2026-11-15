@@ -67,9 +67,9 @@
         });
 
 
-        const headerTitle = (node && node.primary_instrument && node.primary_instrument.title) 
-                            ? node.primary_instrument.title 
-                            : "TACTICAL 360° SWARM RADAR";
+        const headerTitle = (node && node.primary_instrument && node.primary_instrument.title)
+            ? node.primary_instrument.title
+            : "TACTICAL 360° SWARM RADAR";
         ctx.font = "10px 'JetBrains Mono', monospace";
         ctx.fillStyle = isAnomaly ? "#FF3366" : "#00E5FF";
         ctx.fillText(isAnomaly ? "[!] GPS DRIFT DETECTED: AIR-GAP TRIPPED" : "[+] TACTICAL 360° SWARM RADAR: INVARIANTS LOCKED", 16, 22);
@@ -84,9 +84,9 @@
     // MULTI-INSTRUMENT VISUAL DISPATCHER (Radar vs Formation HUD vs FLIR Video)
     // ------------------------------------------------------------------------
     function renderAerospaceInstrument(canvas, node, isAnomaly) {
-        const type = (node && node.primary_instrument && node.primary_instrument.type) 
-                     ? node.primary_instrument.type.toLowerCase() 
-                     : "radar";
+        const type = (node && node.primary_instrument && node.primary_instrument.type)
+            ? node.primary_instrument.type.toLowerCase()
+            : "radar";
 
         if (type === "video") {
             renderFlirThermalGimbal(canvas, node, isAnomaly);
@@ -254,7 +254,7 @@
         id: "aerospace_swarm_adapter",
         matches: (node) => /aerospace|uav|swarm/i.test(node.site || "") || /drone/i.test(node.hostname || ""),
         instrumentTag: "STANAG 4586",
-        renderPrimaryInstrument: renderRadar,
+        renderPrimaryInstrument: renderAerospaceInstrument, // Dispatches Radar vs HUD vs FLIR!
 
         getPrimaryActions: () => `
             <button class="btn-attack btn-attack-danger" id="btn-uav-gps-spoof" style="flex:1; padding:6px; font-size:10px;">[!] INJECT GPS TELEPORTATION SPOOF</button>
