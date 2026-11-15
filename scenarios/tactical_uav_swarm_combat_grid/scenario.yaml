@@ -3,13 +3,14 @@
 version: "1.0"
 scenario:
   name: "tactical_uav_swarm_combat_grid"
-  description: "Full 6-Container Multi-UAV Swarm Combat Grid with 3 Sentry Appliances, GCS, and EW Adversary"
+  description: "Pure Aerospace Swarm Combat Grid: 3 Sentry Appliances, 9 Device-Runtime Sensors, GCS, and EW Adversary"
 
 networks:
-  swarm-combat-net:
+  uav-combat-net:
     driver: bridge
     subnet: "10.240.52.0/24"
     gateway: "10.240.52.1"
+    internal: false
 
 volumes:
   shared-models: { driver: local }
@@ -18,7 +19,7 @@ volumes:
 
 services:
   # ============================================================================
-  # 1. SENTINEL NEXUS (Master Command Plane & Mission Control Web UI :9443)
+  # TIER 6: SENTINEL NEXUS (Master Command Plane & Mission Control Web UI)
   # ============================================================================
   nexus:
     build:
@@ -29,7 +30,7 @@ services:
     restart: unless-stopped
     privileged: true
     networks:
-      swarm-combat-net:
+      uav-combat-net:
         ipv4_address: "10.240.52.10"
     ports:
       - "50051:50051"
@@ -56,7 +57,7 @@ services:
       start_period: 10s
 
   # ============================================================================
-  # 2. EDGE SENTRY 01: UAV ALPHA (Swarm Leader)
+  # EDGE SENTRY 01: UAV ALPHA (Swarm Leader)
   # ============================================================================
   uav-alpha:
     build:
@@ -70,7 +71,7 @@ services:
     depends_on:
       nexus: { condition: service_healthy }
     networks:
-      swarm-combat-net:
+      uav-combat-net:
         ipv4_address: "10.240.52.121"
     ports:
       - "50050:50050/udp"
@@ -94,7 +95,7 @@ services:
       - NEXUS_PORT=50051
 
   # ============================================================================
-  # 3. EDGE SENTRY 02: UAV BRAVO (Wingman 1)
+  # EDGE SENTRY 02: UAV BRAVO (Wingman 1)
   # ============================================================================
   uav-bravo:
     build:
@@ -108,7 +109,7 @@ services:
     depends_on:
       nexus: { condition: service_healthy }
     networks:
-      swarm-combat-net:
+      uav-combat-net:
         ipv4_address: "10.240.52.123"
     ports:
       - "50051:50050/udp"
@@ -132,7 +133,7 @@ services:
       - NEXUS_PORT=50051
 
   # ============================================================================
-  # 4. EDGE SENTRY 03: UAV CHARLIE (Recon Escort)
+  # EDGE SENTRY 03: UAV CHARLIE (Recon Escort)
   # ============================================================================
   uav-charlie:
     build:
@@ -146,7 +147,7 @@ services:
     depends_on:
       nexus: { condition: service_healthy }
     networks:
-      swarm-combat-net:
+      uav-combat-net:
         ipv4_address: "10.240.52.124"
     ports:
       - "50052:50050/udp"
@@ -170,7 +171,97 @@ services:
       - NEXUS_PORT=50051
 
   # ============================================================================
-  # 5. GROUND CONTROL STATION (Multi-Targeted Telecommands)
+  # PHYSICAL SENSORS: UAV ALPHA (Using device-runtime:latest)
+  # ============================================================================
+  sensor-alpha-gnss:
+    image: sentinel-matrix/device-runtime:latest
+    container_name: matrix-alpha-gnss
+    restart: unless-stopped
+    networks:
+      uav-combat-net: { ipv4_address: "10.240.52.141" }
+    ports: ["15023:502"]
+    command: ["--archetype", "sensor", "--protocol", "modbus", "--port", "502", "--name", "Alpha-GNSS-CN0-Monitor"]
+
+  sensor-alpha-imu:
+    image: sentinel-matrix/device-runtime:latest
+    container_name: matrix-alpha-imu
+    restart: unless-stopped
+    networks:
+      uav-combat-net: { ipv4_address: "10.240.52.142" }
+    ports: ["15050:502"]
+    command: ["--archetype", "sensor", "--protocol", "modbus", "--port", "502", "--name", "Alpha-MEMS-Flight-Gyro"]
+
+  sensor-alpha-pitot:
+    image: sentinel-matrix/device-runtime:latest
+    container_name: matrix-alpha-pitot
+    restart: unless-stopped
+    networks:
+      uav-combat-net: { ipv4_address: "10.240.52.143" }
+    ports: ["15092:502"]
+    command: ["--archetype", "sensor", "--protocol", "modbus", "--port", "502", "--name", "Alpha-Pitot-Static-Airspeed"]
+
+  # ============================================================================
+  # PHYSICAL SENSORS: UAV BRAVO (Using device-runtime:latest)
+  # ============================================================================
+  sensor-bravo-gnss:
+    image: sentinel-matrix/device-runtime:latest
+    container_name: matrix-bravo-gnss
+    restart: unless-stopped
+    networks:
+      uav-combat-net: { ipv4_address: "10.240.52.144" }
+    ports: ["15024:502"]
+    command: ["--archetype", "sensor", "--protocol", "modbus", "--port", "502", "--name", "Bravo-GNSS-CN0-Monitor"]
+
+  sensor-bravo-imu:
+    image: sentinel-matrix/device-runtime:latest
+    container_name: matrix-bravo-imu
+    restart: unless-stopped
+    networks:
+      uav-combat-net: { ipv4_address: "10.240.52.145" }
+    ports: ["15051:502"]
+    command: ["--archetype", "sensor", "--protocol", "modbus", "--port", "502", "--name", "Bravo-MEMS-Flight-Gyro"]
+
+  sensor-bravo-pitot:
+    image: sentinel-matrix/device-runtime:latest
+    container_name: matrix-bravo-pitot
+    restart: unless-stopped
+    networks:
+      uav-combat-net: { ipv4_address: "10.240.52.146" }
+    ports: ["15093:502"]
+    command: ["--archetype", "sensor", "--protocol", "modbus", "--port", "502", "--name", "Bravo-Pitot-Static-Airspeed"]
+
+  # ============================================================================
+  # PHYSICAL SENSORS: UAV CHARLIE (Using device-runtime:latest)
+  # ============================================================================
+  sensor-charlie-gnss:
+    image: sentinel-matrix/device-runtime:latest
+    container_name: matrix-charlie-gnss
+    restart: unless-stopped
+    networks:
+      uav-combat-net: { ipv4_address: "10.240.52.147" }
+    ports: ["15025:502"]
+    command: ["--archetype", "sensor", "--protocol", "modbus", "--port", "502", "--name", "Charlie-GNSS-CN0-Monitor"]
+
+  sensor-charlie-imu:
+    image: sentinel-matrix/device-runtime:latest
+    container_name: matrix-charlie-imu
+    restart: unless-stopped
+    networks:
+      uav-combat-net: { ipv4_address: "10.240.52.148" }
+    ports: ["15052:502"]
+    command: ["--archetype", "sensor", "--protocol", "modbus", "--port", "502", "--name", "Charlie-MEMS-Flight-Gyro"]
+
+  sensor-charlie-altimeter:
+    image: sentinel-matrix/device-runtime:latest
+    container_name: matrix-charlie-altimeter
+    restart: unless-stopped
+    networks:
+      uav-combat-net: { ipv4_address: "10.240.52.149" }
+    ports: ["15098:2368/udp"]
+    command: ["--archetype", "vision", "--protocol", "stream_telemetry", "--port", "2368", "--name", "Charlie-Laser-Altimeter-LiDAR"]
+
+  # ============================================================================
+  # TACTICAL GCS & ADVERSARY (Mounted Scripts, Zero Inline Python)
   # ============================================================================
   uav-gcs:
     image: python:3.11-slim
@@ -180,33 +271,12 @@ services:
     depends_on:
       nexus: { condition: service_healthy }
     networks:
-      swarm-combat-net:
+      uav-combat-net:
         ipv4_address: "10.240.52.120"
-    command:
-      - "python3"
-      - "-u"
-      - "-c"
-      - |
-        import socket, time, struct
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        seq = 100
-        drones = [
-            ("10.240.52.121", 1, "Alpha-Leader"),
-            ("10.240.52.123", 2, "Bravo-Wingman"),
-            ("10.240.52.124", 3, "Charlie-Recon")
-        ]
-        print('[GCS Transmitter] Streaming STANAG 4586 C2 to Alpha, Bravo, Charlie...', flush=True)
-        while True:
-            for ip, vid, name in drones:
-                now_us = int(time.time() * 1e6)
-                pkt = struct.pack('>HIIQH12s', 0x1001, vid, seq, now_us, 12, b'WAYPOINT_NAV')
-                sock.sendto(pkt, (ip, 50050))
-                seq += 1
-                time.sleep(0.15)
+    volumes:
+      - ./tools/gcs_transmitter.py:/app/gcs.py:ro
+    command: ["python3", "-u", "/app/gcs.py"]
 
-  # ============================================================================
-  # 6. ELECTRONIC WARFARE ADVERSARY (Heterogeneous Targeted Attack Wave)
-  # ============================================================================
   ew-spoofer:
     image: python:3.11-slim
     container_name: matrix-ew-spoofer
@@ -215,24 +285,8 @@ services:
     depends_on:
       nexus: { condition: service_healthy }
     networks:
-      swarm-combat-net:
+      uav-combat-net:
         ipv4_address: "10.240.52.122"
-    command:
-      - "python3"
-      - "-u"
-      - "-c"
-      - |
-        import socket, time, struct
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        time.sleep(5)
-        print('[EW Adversary Active] Injecting Replays at Alpha and GPS Teleportation at Bravo...', flush=True)
-        while True:
-            now_us = int(time.time() * 1e6)
-            # 1. Stale Sequence Replay targeting Alpha (10.240.52.121)
-            replayed = struct.pack('>HIIQH12s', 0x1001, 1, 100, now_us, 12, b'REPLAY_BLAST')
-            sock.sendto(replayed, ('10.240.52.121', 50050))
-
-            # 2. Rogue GPS Teleportation Jump targeting Bravo (10.240.52.123)
-            spoofed = struct.pack('>HIIQH12s', 0x1001, 2, 9999, now_us, 12, b'GPS_SPOOF_JMP')
-            sock.sendto(spoofed, ('10.240.52.123', 50050))
-            time.sleep(0.6)
+    volumes:
+      - ./tools/ew_spoofer.py:/app/spoofer.py:ro
+    command: ["python3", "-u", "/app/spoofer.py"]
