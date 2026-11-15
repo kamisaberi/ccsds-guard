@@ -1,0 +1,19 @@
+{
+  "name": "tactical_uav_swarm_combat_grid",
+  "slug": "tactical_uav_swarm_combat_grid",
+  "title": "Autonomous Multi-UAV Swarm Tactical Combat Grid (3 Edge Appliances)",
+  "version": "2.0.0",
+  "asset_type": "scenario",
+  "target_sector": "CRITICAL_INFRASTRUCTURE",
+  "sector": "AEROSPACE_DEFENSE",
+  "complexity": "ADVANCED",
+  "category": "AEROSPACE_UAV",
+  "author": "Aryorithm Technologies B.V.",
+  "description": "Multi-node military UAV swarm combat enclave with 3 independent Sentinel edge appliances, GCS C2 transmitter, and EW adversary injecting STANAG 4586 replays and GPS spoofing.",
+  "author_public_key": "d9af7532a37ea3c9c6726adc47720910c44c5f827b408127ec3206c8fc99506c",
+  "dependencies": {
+    "models": ["network_threat_int8.onnx"],
+    "pcaps": []
+  },
+  "compliance": ["NATO-STANAG-4586", "CCSDS-133.0-B-2", "MIL-STD-1553B"]
+}
