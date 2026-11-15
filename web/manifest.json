@@ -1,0 +1,10 @@
+{
+  "plugins": [
+    {
+      "id": "aerospace",
+      "vendor": "vendor/three.min.js",
+      "script": "aerospace/aerospace.js",
+      "style": "aerospace/aerospace.css"
+    }
+  ]
+}
