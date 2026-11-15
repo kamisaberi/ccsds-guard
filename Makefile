@@ -9,18 +9,16 @@
 
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
-# Multi-Node Combat Grid Targets (3 Sentry Appliances)
-
-
-
 
 # Paths & Directories
-PROJECT_DIR  := $(shell pwd)
-BUILD_DIR    := $(PROJECT_DIR)/build
-SCENARIOS_DIR:= $(PROJECT_DIR)/scenarios/uav_swarm_tactical_defense
-MATRIX_DIR   := /home/kami/sentinel-matrix
-NEXUS_DIR    := /home/kami/sentinel-nexus
-JOBS         ?= $(shell nproc)
+PROJECT_DIR   := $(shell pwd)
+BUILD_DIR     := $(PROJECT_DIR)/build
+SCENARIOS_DIR := $(PROJECT_DIR)/scenarios/tactical_uav_swarm_combat_grid
+MATRIX_DIR    := /home/kami/sentinel-matrix
+NEXUS_DIR     := /home/kami/sentinel-nexus
+ETC_HARNESSES := /etc/sentinel/lab/harnesses
+OPT_HARNESSES := /opt/sentinel-stack/harnesses
+JOBS          ?= $(shell nproc)
 
 # Terminal Colors
 CYAN   := \033[1;36m
@@ -40,6 +38,9 @@ help:
 	@echo -e "$(CYAN)================================================================================$(RESET)"
 	@echo -e "Deterministic sub-120 ns validation engine securing UAV swarms & satellite C2."
 	@echo -e ""
+	@echo -e "$(YELLOW)System Initialization:$(RESET)"
+	@echo -e "  $(GREEN)make init$(RESET)         Hard copy all research harnesses to /etc and /opt (NO links)"
+	@echo -e ""
 	@echo -e "$(YELLOW)Core Build & Test Commands:$(RESET)"
 	@echo -e "  $(GREEN)make build$(RESET)        Compile release targets (-O3 -march=native)"
 	@echo -e "  $(GREEN)make debug$(RESET)        Compile debug targets with sanitizers (-fsanitize=address)"
@@ -50,13 +51,13 @@ help:
 	@echo -e "$(YELLOW)Ecosystem Synchronization:$(RESET)"
 	@echo -e "  $(GREEN)make sync-matrix$(RESET)  Deploy libccsds_guard.so to sentinel-matrix shared deps"
 	@echo -e "  $(GREEN)make sync-web$(RESET)     Sync base web app and mountpoint from sentinel-nexus"
-	@echo -e "  $(GREEN)make sync-all$(RESET)     Full synchronization (build + install + sync-matrix + sync-web)"
+	@echo -e "  $(GREEN)make sync-all$(RESET)     Full synchronization (build + install + init + sync-matrix)"
 	@echo -e ""
 	@echo -e "$(YELLOW)Digital Twin Simulation Mesh:$(RESET)"
-	@echo -e "  $(GREEN)make sim-up$(RESET)       Deploy the Autonomous UAV Swarm Tactical Defense Twin"
-	@echo -e "  $(GREEN)make sim-down$(RESET)     Teardown the Swarm simulation mesh and release subnets"
-	@echo -e "  $(GREEN)make sim-status$(RESET)   Display active swarm containers, subnets, and ports"
-	@echo -e "  $(GREEN)make sim-logs$(RESET)     Stream real-time telecommand logs from UAV Flight Controller"
+	@echo -e "  $(GREEN)make combat-up$(RESET)    Deploy 6-container multi-UAV combat grid (3 Sentries)"
+	@echo -e "  $(GREEN)make combat-down$(RESET)  Teardown combat grid and release subnets"
+	@echo -e "  $(GREEN)make combat-status$(RESET)Display running swarm containers and ports"
+	@echo -e "  $(GREEN)make combat-logs$(RESET)  Stream live telecommand logs from UAV Alpha Leader"
 	@echo -e ""
 	@echo -e "$(YELLOW)Clean & Housekeeping:$(RESET)"
 	@echo -e "  $(GREEN)make clean$(RESET)        Remove build artifacts"
@@ -64,7 +65,46 @@ help:
 	@echo -e "$(CYAN)================================================================================$(RESET)"
 
 # ==============================================================================
-# 2. BUILD TARGETS
+# 2. SYSTEM INITIALIZATION (HARD COPIES - ZERO SYMLINKS)
+# ==============================================================================
+.PHONY: init
+init:
+	@echo -e "$(CYAN)================================================================================$(RESET)"
+	@echo -e "$(WHITE)  INITIALIZING PERMANENT SYSTEM HARNESSES (HARD COPY - NO SYMLINKS)            $(RESET)"
+	@echo -e "$(CYAN)================================================================================$(RESET)"
+	@sudo mkdir -p $(ETC_HARNESSES)
+	@sudo mkdir -p $(OPT_HARNESSES)
+	@chmod +x harnesses/*.py 2>/dev/null || true
+	@echo -e "$(CYAN)[+] Hard-copying research harnesses to $(ETC_HARNESSES) and $(OPT_HARNESSES)...$(RESET)"
+	@for f in harnesses/*.py; do \
+		if [ -f "$$f" ]; then \
+			base=$$(basename $$f); \
+			hyphen_base=$$(echo $$base | tr '_' '-'); \
+			sudo rm -f $(ETC_HARNESSES)/$$base $(ETC_HARNESSES)/$$hyphen_base; \
+			sudo cp -f $$f $(ETC_HARNESSES)/$$base; \
+			sudo cp -f $$f $(ETC_HARNESSES)/$$hyphen_base; \
+			sudo rm -f $(OPT_HARNESSES)/$$base $(OPT_HARNESSES)/$$hyphen_base; \
+			sudo cp -f $$f $(OPT_HARNESSES)/$$base; \
+			sudo cp -f $$f $(OPT_HARNESSES)/$$hyphen_base; \
+		fi \
+	done
+	@sudo chmod 755 $(ETC_HARNESSES)/*.py
+	@sudo chmod 755 $(OPT_HARNESSES)/*.py
+	@# Verify that zero symbolic links exist in the destination
+	@for dest in $(ETC_HARNESSES)/*.py $(OPT_HARNESSES)/*.py; do \
+		if [ -L "$$dest" ]; then \
+			echo -e "$(RED)[-] Error: $$dest is a symlink! Aborting.$(RESET)"; \
+			exit 1; \
+		fi \
+	done
+	@echo -e "$(GREEN)[+] Verification: All harnesses are permanent physical files (0 symlinks).$(RESET)"
+	@echo -e "$(GREEN)[+] Production directories initialized with 0755 root permissions:$(RESET)"
+	@echo -e "    • $(ETC_HARNESSES)"
+	@echo -e "    • $(OPT_HARNESSES)"
+	@echo -e "$(CYAN)================================================================================$(RESET)"
+
+# ==============================================================================
+# 3. BUILD TARGETS
 # ==============================================================================
 .PHONY: all build debug
 all: build
@@ -84,7 +124,7 @@ debug:
 	@echo -e "$(GREEN)[+] Debug Build Complete.$(RESET)"
 
 # ==============================================================================
-# 3. VERIFICATION & BENCHMARKS
+# 4. VERIFICATION & BENCHMARKS
 # ==============================================================================
 .PHONY: test bench
 test: build
@@ -97,21 +137,21 @@ bench: build
 	@$(BUILD_DIR)/bench_latency
 
 # ==============================================================================
-# 4. INSTALLATION & DEPLOYMENT
+# 5. INSTALLATION & DEPLOYMENT
 # ==============================================================================
 .PHONY: install sync-matrix sync-web sync-all
-install: build
+install: build init
 	@echo -e "$(CYAN)[+] Installing ccsds-guard System-Wide...$(RESET)"
 	@sudo $(MAKE) -C $(BUILD_DIR) install
 	@sudo ldconfig
 	@mkdir -p $(SCENARIOS_DIR)/plugins
-	@cp $(BUILD_DIR)/ccsds_guard_dissector_plugin.so $(SCENARIOS_DIR)/plugins/
+	@cp -f $(BUILD_DIR)/ccsds_guard_dissector_plugin.so $(SCENARIOS_DIR)/plugins/
 	@echo -e "$(GREEN)[+] Installed /usr/local/lib/libccsds_guard.so, /usr/local/bin/aryo-aerospace.$(RESET)"
 
 sync-matrix: build
 	@echo -e "$(CYAN)[+] Syncing shared libraries to sentinel-matrix...$(RESET)"
 	@mkdir -p $(MATRIX_DIR)/shared/lib
-	@cp $(BUILD_DIR)/libccsds_guard.so $(MATRIX_DIR)/shared/lib/
+	@cp -f $(BUILD_DIR)/libccsds_guard.so $(MATRIX_DIR)/shared/lib/
 	@echo -e "$(GREEN)[+] Synced libccsds_guard.so -> $(MATRIX_DIR)/shared/lib/$(RESET)"
 
 sync-web:
@@ -121,42 +161,36 @@ sync-web:
 		cp -r $(NEXUS_DIR)/web/* $(MATRIX_DIR)/web/ 2>/dev/null || true; \
 		mkdir -p $(MATRIX_DIR)/web/plugins; \
 		echo -e "$(GREEN)[+] Base Web Dashboard Synced & Plugins Mountpoint Initialized.$(RESET)"; \
-	else \
-		echo -e "$(YELLOW)[!] Warning: $(NEXUS_DIR)/web not found. Skipping web sync.$(RESET)"; \
 	fi
 
 sync-all: install sync-matrix sync-web
 	@echo -e "$(GREEN)[+] Full Ecosystem Synchronization Complete.$(RESET)"
 
 # ==============================================================================
-# 5. DIGITAL TWIN SIMULATION ORCHESTRATION
+# 6. DIGITAL TWIN SIMULATION ORCHESTRATION (3-NODE COMBAT GRID)
 # ==============================================================================
-.PHONY: sim sim-up sim-down sim-status sim-logs
-sim: sim-up
-
-sim-up: sync-all
+.PHONY: combat-up combat-down combat-status combat-logs
+combat-up: sync-all
 	@echo -e "$(CYAN)================================================================================$(RESET)"
-	@echo -e "$(WHITE)  LAUNCHING AUTONOMOUS UAV SWARM TACTICAL DEFENSE DIGITAL TWIN                  $(RESET)"
+	@echo -e "$(WHITE)  LAUNCHING 6-CONTAINER MULTI-UAV COMBAT GRID (3 EDGE APPLIANCES)               $(RESET)"
 	@echo -e "$(CYAN)================================================================================$(RESET)"
-	@aryo aerospace sim-swarm
-	@echo -e "$(GREEN)[+] Mission Control Web Console: http://localhost:9443/$(RESET)"
+	@aryo aerospace sim-combat-grid
+	@echo -e "$(GREEN)[+] Swarm Combat Grid Live: http://localhost:9443/$(RESET)"
 
-sim-down:
-	@echo -e "$(YELLOW)[+] Tearing down Swarm Simulation Mesh & Releasing Subnets...$(RESET)"
-	@aryo aerospace sim-swarm-down || true
+combat-down:
+	@echo -e "$(YELLOW)[+] Tearing down Swarm Combat Grid...$(RESET)"
+	@aryo aerospace sim-combat-grid-down || true
 	@docker network prune -f >/dev/null 2>&1 || true
-	@echo -e "$(GREEN)[+] Simulation Mesh Dismantled.$(RESET)"
+	@echo -e "$(GREEN)[+] Swarm Combat Grid Dismantled.$(RESET)"
 
-sim-status:
-	@echo -e "$(CYAN)[+] Active Tactical Swarm Simulation Containers:$(RESET)"
-	@aryo aerospace sim-swarm-status
+combat-status:
+	@docker ps --filter "name=matrix-" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
-sim-logs:
-	@echo -e "$(CYAN)[+] Tailing live telecommands from Protected UAV Alpha (Ctrl+C to exit)...$(RESET)"
+combat-logs:
 	@docker logs -f matrix-uav-alpha
 
 # ==============================================================================
-# 6. CLEAN & HOUSEKEEPING
+# 7. CLEAN & HOUSEKEEPING
 # ==============================================================================
 .PHONY: clean distclean
 clean:
@@ -166,47 +200,6 @@ clean:
 
 distclean: clean
 	@echo -e "$(RED)[+] Performing deep cleanup (dismantling containers, caches, and dangling networks)...$(RESET)"
-	@$(MAKE) sim-down >/dev/null 2>&1 || true
-	@rm -rf $(MATRIX_DIR)/.matrix_cache/docker-compose.uav_swarm_tactical_defense.yml
+	@$(MAKE) combat-down >/dev/null 2>&1 || true
+	@rm -rf $(MATRIX_DIR)/.matrix_cache/docker-compose.tactical_uav_swarm_combat_grid.yml
 	@echo -e "$(GREEN)[+] Deep clean complete.$(RESET)"
-
-vendor-3d:
-	@echo -e "$(CYAN)[+] Downloading standalone air-gapped Three.js build into ccsds-guard/web/vendor/...$(RESET)"
-	@mkdir -p web/vendor
-	@curl -sSL https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js -o web/vendor/three.min.js
-	@echo -e "$(GREEN)[+] Download Complete ($$(ls -lh web/vendor/three.min.js | awk '{print $$5}')). 100% Air-Gapped Ready.$(RESET)"
-
-
-.PHONY: combat-up combat-down combat-status combat-logs
-
-combat-up: sync-all
-	@echo -e "$(CYAN)[+] Launching 6-Container Multi-UAV Swarm Combat Grid (3 Edge Appliances)...$(RESET)"
-	@aryo aerospace sim-combat-grid
-	@echo -e "$(GREEN)[+] Swarm Combat Grid Live: http://localhost:9443/$(RESET)"
-
-combat-down:
-	@echo -e "$(YELLOW)[+] Tearing down Swarm Combat Grid...$(RESET)"
-	@aryo aerospace sim-combat-grid-down || true
-	@docker network prune -f >/dev/null 2>&1 || true
-
-combat-status:
-	@docker ps --filter "name=matrix-" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-
-combat-logs:
-	@docker logs -f matrix-uav-alpha
-
-
-# Add to /home/kami/ccsds-guard/Makefile:
-
-.PHONY: install-harnesses
-install-harnesses:
-	@echo -e "$(CYAN)[+] Installing 6 UAV Swarm Lab Harnesses into /etc/sentinel/lab/harnesses/...$(RESET)"
-	@sudo mkdir -p /etc/sentinel/lab/harnesses
-	@chmod +x harnesses/*.py
-	@sudo ln -sfn $(PROJECT_DIR)/harnesses/uav_replay_blast.py /etc/sentinel/lab/harnesses/uav-replay-blast.py
-	@sudo ln -sfn $(PROJECT_DIR)/harnesses/uav_gps_spoof.py /etc/sentinel/lab/harnesses/uav-gps-spoof.py
-	@sudo ln -sfn $(PROJECT_DIR)/harnesses/uav_desync_audit.py /etc/sentinel/lab/harnesses/uav-desync-audit.py
-	@sudo ln -sfn $(PROJECT_DIR)/harnesses/uav_ccsds_sec.py /etc/sentinel/lab/harnesses/uav-ccsds-sec.py
-	@sudo ln -sfn $(PROJECT_DIR)/harnesses/uav_mesh_cohesion.py /etc/sentinel/lab/harnesses/uav-mesh-cohesion.py
-	@sudo ln -sfn $(PROJECT_DIR)/harnesses/uav_airgap_tripwire.py /etc/sentinel/lab/harnesses/uav-airgap-tripwire.py
-	@echo -e "$(GREEN)[+] 6 Aerospace Lab Harnesses Deployed System-Wide.$(RESET)"
