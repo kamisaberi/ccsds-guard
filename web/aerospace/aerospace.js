@@ -66,6 +66,10 @@
             ctx.fillText(b.label, b.x + 8, b.y + 3);
         });
 
+
+        const headerTitle = (node && node.primary_instrument && node.primary_instrument.title) 
+                            ? node.primary_instrument.title 
+                            : "TACTICAL 360° SWARM RADAR";
         ctx.font = "10px 'JetBrains Mono', monospace";
         ctx.fillStyle = isAnomaly ? "#FF3366" : "#00E5FF";
         ctx.fillText(isAnomaly ? "[!] GPS DRIFT DETECTED: AIR-GAP TRIPPED" : "[+] TACTICAL 360° SWARM RADAR: INVARIANTS LOCKED", 16, 22);
