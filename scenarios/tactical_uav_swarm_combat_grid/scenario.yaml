@@ -260,6 +260,14 @@ services:
     ports: ["15098:2368/udp"]
     command: ["--archetype", "vision", "--protocol", "stream_telemetry", "--port", "2368", "--name", "Charlie-Laser-Altimeter-LiDAR"]
 
+  sensor-charlie-pitot:
+    image: sentinel-matrix/device-runtime:latest
+    container_name: matrix-charlie-pitot
+    restart: unless-stopped
+    networks:
+      uav-combat-net: { ipv4_address: "10.240.52.150" }
+    ports: ["15094:502"]
+    command: ["--archetype", "sensor", "--protocol", "modbus", "--port", "502", "--name", "Charlie-Pitot-Static-Airspeed"]
   # ============================================================================
   # TACTICAL GCS & ADVERSARY (Mounted Scripts, Zero Inline Python)
   # ============================================================================
