@@ -6,11 +6,10 @@ node:
     primary_backend: "CPU_AVX512"
     xdp_driver_mode: "SKB"
 
-# Inherits aerospace_uav base, overrides title & appends FLIR recon gimbal
 ui_profile:
   template: "aerospace_uav"
   overrides:
-    instrument_title: "TACTICAL FLIR RECON GIMBAL & OPTICAL RADAR (CHARLIE)"
+    instrument_title: "OPTICAL FLIR THERMAL RECON GIMBAL (CHARLIE RECON)"
     instrument_type: "video"
     sensors_add:
       - sensor_id: "flir_thermal_gimbal"
