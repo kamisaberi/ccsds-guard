@@ -1,9 +1,0 @@
-{
-    "plugins": [
-        {
-            "id": "aerospace",
-            "script": "aerospace/aerospace.js",
-            "style": "aerospace/aerospace.css"
-        }
-    ]
-}
