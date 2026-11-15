@@ -10,7 +10,7 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 # Multi-Node Combat Grid Targets (3 Sentry Appliances)
-.PHONY: combat-up combat-down combat-status combat-logs
+
 
 
 
@@ -177,6 +177,7 @@ vendor-3d:
 	@echo -e "$(GREEN)[+] Download Complete ($$(ls -lh web/vendor/three.min.js | awk '{print $$5}')). 100% Air-Gapped Ready.$(RESET)"
 
 
+.PHONY: combat-up combat-down combat-status combat-logs
 
 combat-up: sync-all
 	@echo -e "$(CYAN)[+] Launching 6-Container Multi-UAV Swarm Combat Grid (3 Edge Appliances)...$(RESET)"
@@ -193,3 +194,19 @@ combat-status:
 
 combat-logs:
 	@docker logs -f matrix-uav-alpha
+
+
+# Add to /home/kami/ccsds-guard/Makefile:
+
+.PHONY: install-harnesses
+install-harnesses:
+	@echo -e "$(CYAN)[+] Installing 6 UAV Swarm Lab Harnesses into /etc/sentinel/lab/harnesses/...$(RESET)"
+	@sudo mkdir -p /etc/sentinel/lab/harnesses
+	@chmod +x harnesses/*.py
+	@sudo ln -sfn $(PROJECT_DIR)/harnesses/uav_replay_blast.py /etc/sentinel/lab/harnesses/uav-replay-blast.py
+	@sudo ln -sfn $(PROJECT_DIR)/harnesses/uav_gps_spoof.py /etc/sentinel/lab/harnesses/uav-gps-spoof.py
+	@sudo ln -sfn $(PROJECT_DIR)/harnesses/uav_desync_audit.py /etc/sentinel/lab/harnesses/uav-desync-audit.py
+	@sudo ln -sfn $(PROJECT_DIR)/harnesses/uav_ccsds_sec.py /etc/sentinel/lab/harnesses/uav-ccsds-sec.py
+	@sudo ln -sfn $(PROJECT_DIR)/harnesses/uav_mesh_cohesion.py /etc/sentinel/lab/harnesses/uav-mesh-cohesion.py
+	@sudo ln -sfn $(PROJECT_DIR)/harnesses/uav_airgap_tripwire.py /etc/sentinel/lab/harnesses/uav-airgap-tripwire.py
+	@echo -e "$(GREEN)[+] 6 Aerospace Lab Harnesses Deployed System-Wide.$(RESET)"
