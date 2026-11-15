@@ -1,0 +1,238 @@
+# File: /home/kami/ccsds-guard/scenarios/tactical_uav_swarm_combat_grid/scenario.yaml
+
+version: "1.0"
+scenario:
+  name: "tactical_uav_swarm_combat_grid"
+  description: "Full 6-Container Multi-UAV Swarm Combat Grid with 3 Sentry Appliances, GCS, and EW Adversary"
+
+networks:
+  swarm-combat-net:
+    driver: bridge
+    subnet: "10.240.52.0/24"
+    gateway: "10.240.52.1"
+
+volumes:
+  shared-models: { driver: local }
+  shared-datasets: { driver: local }
+  shared-logs: { driver: local }
+
+services:
+  # ============================================================================
+  # 1. SENTINEL NEXUS (Master Command Plane & Mission Control Web UI :9443)
+  # ============================================================================
+  nexus:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.nexus
+    container_name: matrix-nexus
+    hostname: nexus.matrix.internal
+    restart: unless-stopped
+    privileged: true
+    networks:
+      swarm-combat-net:
+        ipv4_address: "10.240.52.10"
+    ports:
+      - "50051:50051"
+      - "9443:9443"
+      - "9444:9444"
+    volumes:
+      - ./configs:/opt/sentinel-nexus/configs:ro
+      - ./models:/opt/sentinel-nexus/models
+      - shared-datasets:/var/lib/sentinel-nexus/forge_datasets
+      - shared-logs:/var/log/sentinel-nexus
+      - ./shared/lib:/usr/local/lib/matrix-deps:ro
+      - ./shared/bin/sentinel-nexus:/usr/local/bin/sentinel-nexus:ro
+      - ./web:/opt/sentinel-nexus/web
+      - ../../web:/opt/sentinel-nexus/web/plugins:ro
+    environment:
+      - LD_LIBRARY_PATH=/usr/local/lib/matrix-deps
+      - VMWARE_ENVIRONMENT=true
+      - NEXUS_ENV=simulation
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9443/api/v1/fleet/nodes"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  # ============================================================================
+  # 2. EDGE SENTRY 01: UAV ALPHA (Swarm Leader)
+  # ============================================================================
+  uav-alpha:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.sentinel
+    container_name: matrix-uav-alpha
+    hostname: drone-alpha.matrix.internal
+    restart: unless-stopped
+    privileged: true
+    cap_add: [NET_ADMIN, SYS_ADMIN, BPF]
+    depends_on:
+      nexus: { condition: service_healthy }
+    networks:
+      swarm-combat-net:
+        ipv4_address: "10.240.52.121"
+    ports:
+      - "50050:50050/udp"
+    volumes:
+      - ./configs/nodes/uav_alpha_leader.yaml:/etc/sentinel/sentinel.yaml:ro
+      - ./configs:/etc/sentinel/configs:ro
+      - ./models:/etc/sentinel/models:rw
+      - shared-logs:/var/log/sentinel
+      - ./shared/lib:/usr/local/lib/matrix-deps:ro
+      - ./shared/bin/sentinel:/usr/local/bin/sentinel:ro
+      - ../../build/ccsds_guard_dissector_plugin.so:/etc/sentinel/plugins.d/ccsds_guard_dissector_plugin.so:ro
+    environment:
+      - LD_LIBRARY_PATH=/usr/local/lib/matrix-deps
+      - NODE_IDENTIFIER=UAV-ALPHA-LEADER
+      - SITE_IDENTIFIER=Tactical-Combat-Airspace
+      - NODE_SITE=Aerospace-Swarm-Airspace
+      - PRIMARY_BACKEND=CPU_AVX512
+      - VMWARE_VIRTUAL_NIC=true
+      - XDP_MODE=SKB
+      - NEXUS_HOST=10.240.52.10
+      - NEXUS_PORT=50051
+
+  # ============================================================================
+  # 3. EDGE SENTRY 02: UAV BRAVO (Wingman 1)
+  # ============================================================================
+  uav-bravo:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.sentinel
+    container_name: matrix-uav-bravo
+    hostname: drone-bravo.matrix.internal
+    restart: unless-stopped
+    privileged: true
+    cap_add: [NET_ADMIN, SYS_ADMIN, BPF]
+    depends_on:
+      nexus: { condition: service_healthy }
+    networks:
+      swarm-combat-net:
+        ipv4_address: "10.240.52.123"
+    ports:
+      - "50051:50050/udp"
+    volumes:
+      - ./configs/nodes/uav_bravo_wingman.yaml:/etc/sentinel/sentinel.yaml:ro
+      - ./configs:/etc/sentinel/configs:ro
+      - ./models:/etc/sentinel/models:rw
+      - shared-logs:/var/log/sentinel
+      - ./shared/lib:/usr/local/lib/matrix-deps:ro
+      - ./shared/bin/sentinel:/usr/local/bin/sentinel:ro
+      - ../../build/ccsds_guard_dissector_plugin.so:/etc/sentinel/plugins.d/ccsds_guard_dissector_plugin.so:ro
+    environment:
+      - LD_LIBRARY_PATH=/usr/local/lib/matrix-deps
+      - NODE_IDENTIFIER=UAV-BRAVO-WINGMAN
+      - SITE_IDENTIFIER=Tactical-Combat-Airspace
+      - NODE_SITE=Aerospace-Swarm-Airspace
+      - PRIMARY_BACKEND=CPU_AVX512
+      - VMWARE_VIRTUAL_NIC=true
+      - XDP_MODE=SKB
+      - NEXUS_HOST=10.240.52.10
+      - NEXUS_PORT=50051
+
+  # ============================================================================
+  # 4. EDGE SENTRY 03: UAV CHARLIE (Recon Escort)
+  # ============================================================================
+  uav-charlie:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.sentinel
+    container_name: matrix-uav-charlie
+    hostname: drone-charlie.matrix.internal
+    restart: unless-stopped
+    privileged: true
+    cap_add: [NET_ADMIN, SYS_ADMIN, BPF]
+    depends_on:
+      nexus: { condition: service_healthy }
+    networks:
+      swarm-combat-net:
+        ipv4_address: "10.240.52.124"
+    ports:
+      - "50052:50050/udp"
+    volumes:
+      - ./configs/nodes/uav_charlie_recon.yaml:/etc/sentinel/sentinel.yaml:ro
+      - ./configs:/etc/sentinel/configs:ro
+      - ./models:/etc/sentinel/models:rw
+      - shared-logs:/var/log/sentinel
+      - ./shared/lib:/usr/local/lib/matrix-deps:ro
+      - ./shared/bin/sentinel:/usr/local/bin/sentinel:ro
+      - ../../build/ccsds_guard_dissector_plugin.so:/etc/sentinel/plugins.d/ccsds_guard_dissector_plugin.so:ro
+    environment:
+      - LD_LIBRARY_PATH=/usr/local/lib/matrix-deps
+      - NODE_IDENTIFIER=UAV-CHARLIE-RECON
+      - SITE_IDENTIFIER=Tactical-Combat-Airspace
+      - NODE_SITE=Aerospace-Swarm-Airspace
+      - PRIMARY_BACKEND=CPU_AVX512
+      - VMWARE_VIRTUAL_NIC=true
+      - XDP_MODE=SKB
+      - NEXUS_HOST=10.240.52.10
+      - NEXUS_PORT=50051
+
+  # ============================================================================
+  # 5. GROUND CONTROL STATION (Multi-Targeted Telecommands)
+  # ============================================================================
+  uav-gcs:
+    image: python:3.11-slim
+    container_name: matrix-uav-gcs
+    hostname: gcs.matrix.internal
+    restart: unless-stopped
+    depends_on:
+      nexus: { condition: service_healthy }
+    networks:
+      swarm-combat-net:
+        ipv4_address: "10.240.52.120"
+    command:
+      - "python3"
+      - "-u"
+      - "-c"
+      - |
+        import socket, time, struct
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        seq = 100
+        drones = [
+            ("10.240.52.121", 1, "Alpha-Leader"),
+            ("10.240.52.123", 2, "Bravo-Wingman"),
+            ("10.240.52.124", 3, "Charlie-Recon")
+        ]
+        print('[GCS Transmitter] Streaming STANAG 4586 C2 to Alpha, Bravo, Charlie...', flush=True)
+        while True:
+            for ip, vid, name in drones:
+                now_us = int(time.time() * 1e6)
+                pkt = struct.pack('>HIIQH12s', 0x1001, vid, seq, now_us, 12, b'WAYPOINT_NAV')
+                sock.sendto(pkt, (ip, 50050))
+                seq += 1
+                time.sleep(0.15)
+
+  # ============================================================================
+  # 6. ELECTRONIC WARFARE ADVERSARY (Heterogeneous Targeted Attack Wave)
+  # ============================================================================
+  ew-spoofer:
+    image: python:3.11-slim
+    container_name: matrix-ew-spoofer
+    hostname: ew-spoofer.matrix.internal
+    restart: unless-stopped
+    depends_on:
+      nexus: { condition: service_healthy }
+    networks:
+      swarm-combat-net:
+        ipv4_address: "10.240.52.122"
+    command:
+      - "python3"
+      - "-u"
+      - "-c"
+      - |
+        import socket, time, struct
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        time.sleep(5)
+        print('[EW Adversary Active] Injecting Replays at Alpha and GPS Teleportation at Bravo...', flush=True)
+        while True:
+            now_us = int(time.time() * 1e6)
+            # 1. Stale Sequence Replay targeting Alpha (10.240.52.121)
+            replayed = struct.pack('>HIIQH12s', 0x1001, 1, 100, now_us, 12, b'REPLAY_BLAST')
+            sock.sendto(replayed, ('10.240.52.121', 50050))
+
+            # 2. Rogue GPS Teleportation Jump targeting Bravo (10.240.52.123)
+            spoofed = struct.pack('>HIIQH12s', 0x1001, 2, 9999, now_us, 12, b'GPS_SPOOF_JMP')
+            sock.sendto(spoofed, ('10.240.52.123', 50050))
+            time.sleep(0.6)
