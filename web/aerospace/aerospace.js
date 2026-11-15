@@ -75,6 +75,180 @@
         ctx.fillText(isAnomaly ? "[!] GPS DRIFT DETECTED: AIR-GAP TRIPPED" : "[+] TACTICAL 360° SWARM RADAR: INVARIANTS LOCKED", 16, 22);
     }
 
+
+
+
+
+
+    // ------------------------------------------------------------------------
+    // MULTI-INSTRUMENT VISUAL DISPATCHER (Radar vs Formation HUD vs FLIR Video)
+    // ------------------------------------------------------------------------
+    function renderAerospaceInstrument(canvas, node, isAnomaly) {
+        const type = (node && node.primary_instrument && node.primary_instrument.type) 
+                     ? node.primary_instrument.type.toLowerCase() 
+                     : "radar";
+
+        if (type === "video") {
+            renderFlirThermalGimbal(canvas, node, isAnomaly);
+        } else if (type === "formation") {
+            renderFormationHud(canvas, node, isAnomaly);
+        } else {
+            renderTacticalRadar(canvas, node, isAnomaly);
+        }
+    }
+
+    // 1. TACTICAL 360° RADAR (ALPHA LEADER)
+    function renderTacticalRadar(canvas, node, isAnomaly) {
+        const ctx = canvas.getContext("2d");
+        const w = canvas.width;
+        const h = canvas.height;
+        const cx = w / 2;
+        const cy = h / 2;
+        const r = Math.min(cx, cy) - 16;
+        radarTick += 0.03;
+
+        ctx.fillStyle = "#040810";
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.strokeStyle = isAnomaly ? "rgba(255, 51, 102, 0.35)" : "rgba(0, 229, 255, 0.22)";
+        ctx.lineWidth = 1;
+        [0.25, 0.5, 0.75, 1.0].forEach(factor => {
+            ctx.beginPath();
+            ctx.arc(cx, cy, r * factor, 0, Math.PI * 2);
+            ctx.stroke();
+        });
+
+        ctx.beginPath();
+        ctx.moveTo(cx - r, cy); ctx.lineTo(cx + r, cy);
+        ctx.moveTo(cx, cy - r); ctx.lineTo(cx, cy + r);
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(radarTick);
+        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+        grad.addColorStop(0, isAnomaly ? "rgba(255, 51, 102, 0.6)" : "rgba(0, 255, 163, 0.5)");
+        grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, r, 0, Math.PI / 4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        const blips = [
+            { x: cx - 40, y: cy - 30, label: "UAV-1 ALPHA (LEADER)", color: "#00FFA3" },
+            { x: cx + 55, y: cy + 20, label: "UAV-2 BRAVO (WING)", color: "#00E5FF" },
+            { x: cx - 60, y: cy + 50, label: "UAV-3 CHARLIE (RECON)", color: "#FFB800" },
+            { x: cx + 90, y: cy - 70, label: isAnomaly ? "EW-SPOOFER [INJECTING]" : "EW-SPOOFER [IDLE]", color: isAnomaly ? "#FF3366" : "#8A99AD" }
+        ];
+
+        blips.forEach(b => {
+            ctx.fillStyle = b.color;
+            ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.font = "9px 'JetBrains Mono', monospace";
+            ctx.fillStyle = b.color;
+            ctx.fillText(b.label, b.x + 8, b.y + 3);
+        });
+
+        const title = (node && node.primary_instrument && node.primary_instrument.title) ? node.primary_instrument.title : "TACTICAL 360° RADAR";
+        ctx.font = "10px 'JetBrains Mono', monospace";
+        ctx.fillStyle = isAnomaly ? "#FF3366" : "#00E5FF";
+        ctx.fillText(isAnomaly ? "[!] GPS DRIFT DETECTED: AIR-GAP TRIPPED" : "[+] " + title, 16, 22);
+    }
+
+    // 2. TACTICAL FORMATION & INTERCEPT HUD (BRAVO WINGMAN)
+    function renderFormationHud(canvas, node, isAnomaly) {
+        const ctx = canvas.getContext("2d");
+        const w = canvas.width;
+        const h = canvas.height;
+        radarTick += 0.02;
+
+        ctx.fillStyle = "#040712";
+        ctx.fillRect(0, 0, w, h);
+
+        // Pitch & Roll Artificial Horizon Ladder
+        ctx.strokeStyle = "rgba(0, 229, 255, 0.25)";
+        ctx.lineWidth = 1.5;
+        const cy = h / 2 + Math.sin(radarTick) * 8;
+        [-40, -20, 0, 20, 40].forEach(offset => {
+            const y = cy + offset;
+            ctx.beginPath();
+            ctx.moveTo(w / 2 - 60, y); ctx.lineTo(w / 2 + 60, y);
+            ctx.stroke();
+            ctx.font = "8px 'JetBrains Mono', monospace";
+            ctx.fillStyle = "#00E5FF";
+            ctx.fillText(`${-offset}°`, w / 2 + 65, y + 3);
+        });
+
+        // Intercept Target Box
+        const targetX = w / 2 + 80 + Math.cos(radarTick) * 15;
+        const targetY = h / 2 - 30 + Math.sin(radarTick * 1.5) * 10;
+        ctx.strokeStyle = isAnomaly ? "#FF3366" : "#00FFA3";
+        ctx.strokeRect(targetX - 20, targetY - 20, 40, 40);
+        ctx.font = "9px 'JetBrains Mono', monospace";
+        ctx.fillStyle = isAnomaly ? "#FF3366" : "#00FFA3";
+        ctx.fillText("ECHELON LOCK: ALPHA LEADER", targetX - 45, targetY - 26);
+        ctx.fillText("ΔDIST: 42.4m | ΔV: 0.2m/s", targetX - 35, targetY + 34);
+
+        // Heading Tape
+        ctx.fillStyle = "rgba(13, 17, 26, 0.9)";
+        ctx.fillRect(0, 0, w, 30);
+        ctx.strokeStyle = "#1A2232";
+        ctx.strokeRect(0, 0, w, 30);
+        ctx.font = "10px 'JetBrains Mono', monospace";
+        ctx.fillStyle = "#00FFA3";
+        ctx.fillText("[+] SWARM FORMATION & INTERCEPT HUD (BRAVO WINGMAN) - MESH LINK 1.4ms", 16, 20);
+    }
+
+    // 3. OPTICAL FLIR THERMAL RECON GIMBAL (CHARLIE RECON)
+    function renderFlirThermalGimbal(canvas, node, isAnomaly) {
+        const ctx = canvas.getContext("2d");
+        const w = canvas.width;
+        const h = canvas.height;
+        radarTick += 0.02;
+
+        // Radiometric Thermal Palette Gradient Background
+        const grad = ctx.createLinearGradient(0, 0, w, h);
+        grad.addColorStop(0, "#08031a");
+        grad.addColorStop(0.5, "#1f0638");
+        grad.addColorStop(1, isAnomaly ? "#4d0011" : "#0b1226");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Thermal Hotspot (Simulated Recon Target)
+        const hotX = w / 2 + Math.sin(radarTick) * 30;
+        const hotY = h / 2 + Math.cos(radarTick * 0.8) * 20;
+        const heatGrad = ctx.createRadialGradient(hotX, hotY, 4, hotX, hotY, 70);
+        heatGrad.addColorStop(0, "#FFFFFF");
+        heatGrad.addColorStop(0.3, isAnomaly ? "#FF1144" : "#FF9900");
+        heatGrad.addColorStop(0.7, "#8800AA");
+        heatGrad.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = heatGrad;
+        ctx.beginPath(); ctx.arc(hotX, hotY, 70, 0, Math.PI * 2); ctx.fill();
+
+        // Optical Reticle Crosshairs
+        ctx.strokeStyle = "rgba(0, 229, 255, 0.6)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(hotX, hotY, 30, 0, Math.PI * 2);
+        ctx.moveTo(hotX - 45, hotY); ctx.lineTo(hotX + 45, hotY);
+        ctx.moveTo(hotX, hotY - 45); ctx.lineTo(hotX, hotY + 45);
+        ctx.stroke();
+
+        // HUD Metadata Overlays
+        ctx.font = "10px 'JetBrains Mono', monospace";
+        ctx.fillStyle = "#00FFA3";
+        ctx.fillText("FLIR GIMBAL OPTICAL FEED: 1080p @ 30 FPS", 16, 24);
+        ctx.fillStyle = isAnomaly ? "#FF3366" : "#00E5FF";
+        ctx.fillText(`TARGET MAX TEMP: ${isAnomaly ? '118.4' : '38.5'}°C | WHEP RTSP :8554`, 16, 40);
+        ctx.fillText(`TRACKING: GROUND VEHICLE CONVOY [LOCKED]`, hotX + 38, hotY - 10);
+    }
+
+
+
+
     // Register Node Adapter for Master-Detail Cockpit
     window.SentinelUI.registerNodeAdapter({
         id: "aerospace_swarm_adapter",
