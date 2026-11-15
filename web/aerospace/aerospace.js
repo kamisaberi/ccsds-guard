@@ -75,7 +75,6 @@
     window.SentinelUI.registerNodeAdapter({
         id: "aerospace_swarm_adapter",
         matches: (node) => /aerospace|uav|swarm/i.test(node.site || "") || /drone/i.test(node.hostname || ""),
-        instrumentTitle: "TACTICAL 360° UAV SWARM RADAR & WAYPOINT ENVELOPE",
         instrumentTag: "STANAG 4586",
         renderPrimaryInstrument: renderRadar,
 
@@ -93,22 +92,9 @@
                 window.isThermalAnomaly = false;
                 logEvent("[AEROSPACE] Kinematic dead-reckoning envelope restored. Airgap armed.", "text-green");
             });
-        },
-
-        getSensors: () => [
-            { sensor_id: "stanag_telecommand", name: "NATO STANAG 4586 Telecommand Link", port: 50050, unit: "Seq/s", baseline: 10, category: "CYBER" },
-            { sensor_id: "gps_drift_barrier", name: "GPS Kinematic Envelope Barrier", port: 50050, unit: "m/s", baseline: 12.4, category: "CPS" },
-            { sensor_id: "actuator_airgap_relay", name: "Hardware Actuator Air-Gap Relay", port: "RELAY", unit: "LATCH", baseline: 0, category: "RELAY" }
-        ],
-
-        getAttacks: () => [
-            { id: "stanag_replay", name: "[!] STANAG 4586 Replay Blast" },
-            { id: "gps_teleport", name: "[!] GPS Teleportation Jump" },
-            { id: "timestamp_desync", name: "[!] Telemetry Clock Desync" },
-            { id: "ccsds_tamper", name: "[!] CCSDS 133 Frame Tampering" }
-        ]
+        }
+        // Removed hardcoded getSensors and getAttacks so backend template engine drives them!
     });
-
     // ========================================================================
     // 2. FULLY INTERACTIVE TACTICAL SWARM C2 (3D Orbit, Pan, and Zoom)
     // ========================================================================
