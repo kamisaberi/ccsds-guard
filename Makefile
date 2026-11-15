@@ -9,6 +9,10 @@
 
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
+# Multi-Node Combat Grid Targets (3 Sentry Appliances)
+.PHONY: combat-up combat-down combat-status combat-logs
+
+
 
 # Paths & Directories
 PROJECT_DIR  := $(shell pwd)
@@ -171,3 +175,21 @@ vendor-3d:
 	@mkdir -p web/vendor
 	@curl -sSL https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js -o web/vendor/three.min.js
 	@echo -e "$(GREEN)[+] Download Complete ($$(ls -lh web/vendor/three.min.js | awk '{print $$5}')). 100% Air-Gapped Ready.$(RESET)"
+
+
+
+combat-up: sync-all
+	@echo -e "$(CYAN)[+] Launching 6-Container Multi-UAV Swarm Combat Grid (3 Edge Appliances)...$(RESET)"
+	@aryo aerospace sim-combat-grid
+	@echo -e "$(GREEN)[+] Swarm Combat Grid Live: http://localhost:9443/$(RESET)"
+
+combat-down:
+	@echo -e "$(YELLOW)[+] Tearing down Swarm Combat Grid...$(RESET)"
+	@aryo aerospace sim-combat-grid-down || true
+	@docker network prune -f >/dev/null 2>&1 || true
+
+combat-status:
+	@docker ps --filter "name=matrix-" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+combat-logs:
+	@docker logs -f matrix-uav-alpha
