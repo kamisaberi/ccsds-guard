@@ -268,8 +268,8 @@ services:
       uav-combat-net: { ipv4_address: "10.240.52.150" }
     ports: ["15094:502"]
     command: ["--archetype", "sensor", "--protocol", "modbus", "--port", "502", "--name", "Charlie-Pitot-Static-Airspeed"]
-  # ============================================================================
-  # TACTICAL GCS & ADVERSARY (Mounted Scripts, Zero Inline Python)
+# ============================================================================
+  # TACTICAL GCS & ADVERSARY (Mounted Scripts, Live 3D Coordinate Stream :18090)
   # ============================================================================
   uav-gcs:
     image: python:3.11-slim
@@ -281,10 +281,14 @@ services:
     networks:
       uav-combat-net:
         ipv4_address: "10.240.52.120"
+    ports:
+      - "18090:8090"
     volumes:
       - ./tools/gcs_transmitter.py:/app/gcs.py:ro
     command: ["python3", "-u", "/app/gcs.py"]
 
+
+    
   ew-spoofer:
     image: python:3.11-slim
     container_name: matrix-ew-spoofer
