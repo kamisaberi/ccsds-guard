@@ -498,6 +498,11 @@
         ];
 
 
+
+
+        
+
+
         // Live Target Coordinates Polled Directly from Docker Container (matrix-uav-gcs :18090)
         let dockerTargetAlpha = { x: 0, y: 80, z: 120, heading: 0, roll: 0, v_mps: 24.2 };
         let dockerTargetBravo = { x: -135, y: -25, z: 118, heading: 0, roll: 0, v_mps: 24.0 };
