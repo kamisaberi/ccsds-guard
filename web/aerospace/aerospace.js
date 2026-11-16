@@ -377,7 +377,7 @@
             syncSlidersFromView();
         });
 
-        // Formation Switchers
+        // Formation Switchers -> Commands the Docker GCS Container via POST :18090/formation
         const formMap = {
             "c2-form-v": "v_formation",
             "c2-form-echelon": "echelon",
@@ -389,9 +389,15 @@
                 currentFormation = formMap[btnId];
                 Object.keys(formMap).forEach(id => document.getElementById(id)?.classList.remove("active-green"));
                 e.currentTarget.classList.add("active-green");
+
+                // Command the running matrix-uav-gcs Docker container to morph wire coordinates
+                fetch(`http://${window.location.hostname}:18090/formation`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ formation: currentFormation })
+                }).catch(() => { });
             });
         });
-
         // EW Jammer Toggle
         document.getElementById("c2-toggle-jam")?.addEventListener("click", (e) => {
             isJammingActive = !isJammingActive;
