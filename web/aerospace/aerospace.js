@@ -497,89 +497,9 @@
             { id: "WP-04 [EGRESS]", x: 180, y: 260, z: 130 }
         ];
 
-        function animateTheatre() {
-            c2AnimId = requestAnimationFrame(animateTheatre);
-            tick += 0.016;
 
-            // 1. Update Swarm Formation Kinematics
-            const patrolX = Math.sin(tick * 0.65) * 140;
-            const patrolY = Math.cos(tick * 0.35) * 90 + 50;
-            const vx = Math.cos(tick * 0.65) * 140 * 0.65;
-            const vy = -Math.sin(tick * 0.35) * 90 * 0.35;
-            const heading = Math.atan2(vx, vy);
-            const bankRoll = -vx * 0.003;
+        
 
-            posAlpha.x += (patrolX - posAlpha.x) * 0.08;
-            posAlpha.y += (patrolY - posAlpha.y) * 0.08;
-            posAlpha.z = 120 + Math.sin(tick * 2.0) * 4;
-            posAlpha.heading = heading;
-            posAlpha.roll = bankRoll;
-
-            let targetBx = posAlpha.x - 135, targetBy = posAlpha.y - 105;
-            let targetCx = posAlpha.x + 135, targetCy = posAlpha.y - 105;
-
-            if (currentFormation === "echelon") {
-                targetBx = posAlpha.x + 105; targetBy = posAlpha.y - 75;
-                targetCx = posAlpha.x + 210; targetCy = posAlpha.y - 150;
-            } else if (currentFormation === "diamond") {
-                targetBx = posAlpha.x - 125; targetBy = posAlpha.y - 20;
-                targetCx = posAlpha.x; targetCy = posAlpha.y - 165;
-            } else if (currentFormation === "orbit") {
-                targetBx = posAlpha.x + Math.cos(tick * 1.6) * 155;
-                targetBy = posAlpha.y + Math.sin(tick * 1.6) * 155;
-                targetCx = posAlpha.x + Math.cos(tick * 1.6 + Math.PI) * 155;
-                targetCy = posAlpha.y + Math.sin(tick * 1.6 + Math.PI) * 155;
-            }
-
-            posBravo.x += (targetBx - posBravo.x) * 0.07;
-            posBravo.y += (targetBy - posBravo.y) * 0.07;
-            posBravo.z = 118 + Math.sin(tick * 2.0 + 1.0) * 4;
-            posBravo.heading = heading;
-            posBravo.roll = bankRoll;
-
-            posCharlie.x += (targetCx - posCharlie.x) * 0.07;
-            posCharlie.y += (targetCy - posCharlie.y) * 0.07;
-            posCharlie.z = 145 + Math.sin(tick * 2.0 + 2.0) * 4;
-            posCharlie.heading = heading;
-            posCharlie.roll = bankRoll;
-
-            const posSat = {
-                x: Math.sin(tick * 0.25) * 460,
-                y: Math.cos(tick * 0.25) * 280,
-                z: 420
-            };
-
-            if (Math.floor(tick * 60) % 2 === 0) {
-                trailAlpha.push({ x: posAlpha.x, y: posAlpha.y, z: posAlpha.z });
-                trailBravo.push({ x: posBravo.x, y: posBravo.y, z: posBravo.z });
-                trailCharlie.push({ x: posCharlie.x, y: posCharlie.y, z: posCharlie.z });
-                if (trailAlpha.length > 55) trailAlpha.shift();
-                if (trailBravo.length > 55) trailBravo.shift();
-                if (trailCharlie.length > 55) trailCharlie.shift();
-            }
-
-            if (lockedEntity) {
-                const mapTarget = {
-                    alpha: posAlpha,
-                    bravo: posBravo,
-                    charlie: posCharlie,
-                    ew: posEw,
-                    sat: posSat
-                }[lockedEntity];
-                if (mapTarget) {
-                    const [tLon, tLat] = metersToLngLat(mapTarget.x, mapTarget.y);
-                    viewState.longitude += (tLon - viewState.longitude) * 0.14;
-                    viewState.latitude += (tLat - viewState.latitude) * 0.14;
-                }
-            }
-
-            render7LayerTheatre(hudCanvas, {
-                posAlpha, posBravo, posCharlie, posGcs, posEw, posSat,
-                trailAlpha, trailBravo, trailCharlie, waypointGates, tick
-            });
-        }
-
-        animateTheatre();
     }
 
     // ========================================================================
