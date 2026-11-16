@@ -498,7 +498,102 @@
         ];
 
 
-        
+        // Live Target Coordinates Polled Directly from Docker Container (matrix-uav-gcs :18090)
+        let dockerTargetAlpha = { x: 0, y: 80, z: 120, heading: 0, roll: 0, v_mps: 24.2 };
+        let dockerTargetBravo = { x: -135, y: -25, z: 118, heading: 0, roll: 0, v_mps: 24.0 };
+        let dockerTargetCharlie = { x: 135, y: -25, z: 145, heading: 0, roll: 0, v_mps: 24.4 };
+        let dockerTargetSat = { x: 0, y: 0, z: 420 };
+        let dockerGcsOnline = false;
+        let dockerLastSeq = 100;
+
+        async function pollDockerGcsTelemetry() {
+            try {
+                const resp = await fetch(`http://${window.location.hostname}:18090/telemetry`, { cache: "no-store" });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    dockerGcsOnline = true;
+                    dockerLastSeq = data.seq || dockerLastSeq;
+                    if (data.drones) {
+                        if (data.drones.alpha) dockerTargetAlpha = data.drones.alpha;
+                        if (data.drones.bravo) dockerTargetBravo = data.drones.bravo;
+                        if (data.drones.charlie) dockerTargetCharlie = data.drones.charlie;
+                    }
+                    if (data.sat) dockerTargetSat = data.sat;
+                } else {
+                    dockerGcsOnline = false;
+                }
+            } catch (e) {
+                dockerGcsOnline = false;
+            }
+        }
+
+        // Poll Docker GCS container every 100ms
+        const gcsPollTimer = setInterval(pollDockerGcsTelemetry, 100);
+        pollDockerGcsTelemetry();
+
+        function animateTheatre() {
+            c2AnimId = requestAnimationFrame(animateTheatre);
+            tick += 0.016;
+
+            // Smooth 60-FPS interpolation toward the real Docker container coordinates
+            // If matrix-uav-gcs is stopped, drones hold their last received position!
+            posAlpha.x += (dockerTargetAlpha.x - posAlpha.x) * 0.12;
+            posAlpha.y += (dockerTargetAlpha.y - posAlpha.y) * 0.12;
+            posAlpha.z += (dockerTargetAlpha.z - posAlpha.z) * 0.12;
+            posAlpha.heading = dockerTargetAlpha.heading || 0;
+            posAlpha.roll = dockerTargetAlpha.roll || 0;
+
+            posBravo.x += (dockerTargetBravo.x - posBravo.x) * 0.12;
+            posBravo.y += (dockerTargetBravo.y - posBravo.y) * 0.12;
+            posBravo.z += (dockerTargetBravo.z - posBravo.z) * 0.12;
+            posBravo.heading = dockerTargetBravo.heading || 0;
+            posBravo.roll = dockerTargetBravo.roll || 0;
+
+            posCharlie.x += (dockerTargetCharlie.x - posCharlie.x) * 0.12;
+            posCharlie.y += (dockerTargetCharlie.y - posCharlie.y) * 0.12;
+            posCharlie.z += (dockerTargetCharlie.z - posCharlie.z) * 0.12;
+            posCharlie.heading = dockerTargetCharlie.heading || 0;
+            posCharlie.roll = dockerTargetCharlie.roll || 0;
+
+            const posSat = {
+                x: dockerTargetSat.x,
+                y: dockerTargetSat.y,
+                z: dockerTargetSat.z
+            };
+
+            if (dockerGcsOnline && Math.floor(tick * 60) % 2 === 0) {
+                trailAlpha.push({ x: posAlpha.x, y: posAlpha.y, z: posAlpha.z });
+                trailBravo.push({ x: posBravo.x, y: posBravo.y, z: posBravo.z });
+                trailCharlie.push({ x: posCharlie.x, y: posCharlie.y, z: posCharlie.z });
+                if (trailAlpha.length > 55) trailAlpha.shift();
+                if (trailBravo.length > 55) trailBravo.shift();
+                if (trailCharlie.length > 55) trailCharlie.shift();
+            }
+
+            if (lockedEntity) {
+                const mapTarget = {
+                    alpha: posAlpha,
+                    bravo: posBravo,
+                    charlie: posCharlie,
+                    ew: posEw,
+                    sat: posSat
+                }[lockedEntity];
+                if (mapTarget) {
+                    const [tLon, tLat] = metersToLngLat(mapTarget.x, mapTarget.y);
+                    viewState.longitude += (tLon - viewState.longitude) * 0.14;
+                    viewState.latitude += (tLat - viewState.latitude) * 0.14;
+                }
+            }
+
+            render7LayerTheatre(hudCanvas, {
+                posAlpha, posBravo, posCharlie, posGcs, posEw, posSat,
+                trailAlpha, trailBravo, trailCharlie, waypointGates, tick,
+                dockerGcsOnline, dockerLastSeq
+            });
+        }
+
+        animateTheatre();
+
 
     }
 
