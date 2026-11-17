@@ -126,7 +126,8 @@ services:
       - shared-logs:/var/log/sentinel
       - ./shared/lib:/usr/local/lib/matrix-deps:ro
       - ./shared/bin/sentinel:/usr/local/bin/sentinel:ro
-      - ../../build/ccsds_guard_dissector_plugin.so:/etc/sentinel/plugins.d/ccsds_guard_dissector_plugin.so:ro
+      - /usr/local/lib/libccsds_guard.so:/usr/local/lib/libccsds_guard.so:ro
+      - /usr/local/lib/blackbox/ccsds_guard_dissector_plugin.so:/etc/sentinel/plugins.d/ccsds_guard_dissector_plugin.so:ro
     environment:
       - LD_LIBRARY_PATH=/usr/local/lib/matrix-deps
       - NODE_IDENTIFIER=UAV-BRAVO-WINGMAN
@@ -165,7 +166,8 @@ services:
       - shared-logs:/var/log/sentinel
       - ./shared/lib:/usr/local/lib/matrix-deps:ro
       - ./shared/bin/sentinel:/usr/local/bin/sentinel:ro
-      - ../../build/ccsds_guard_dissector_plugin.so:/etc/sentinel/plugins.d/ccsds_guard_dissector_plugin.so:ro
+      - /usr/local/lib/libccsds_guard.so:/usr/local/lib/libccsds_guard.so:ro
+      - /usr/local/lib/blackbox/ccsds_guard_dissector_plugin.so:/etc/sentinel/plugins.d/ccsds_guard_dissector_plugin.so:ro
     environment:
       - LD_LIBRARY_PATH=/usr/local/lib/matrix-deps
       - NODE_IDENTIFIER=UAV-CHARLIE-RECON
