@@ -118,6 +118,7 @@ services:
       - ./configs/nodes/uav_bravo_wingman.yaml:/etc/sentinel/sentinel.yaml:ro
       - ./configs:/etc/sentinel/configs:ro
       - ./models:/etc/sentinel/models:rw
+      - ./models:/opt/sentinel/models:rw
       - shared-logs:/var/log/sentinel
       - ./shared/lib:/usr/local/lib/matrix-deps:ro
       - ./shared/bin/sentinel:/usr/local/bin/sentinel:ro
