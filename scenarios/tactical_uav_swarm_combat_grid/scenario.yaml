@@ -84,6 +84,7 @@ services:
       - ./shared/lib:/usr/local/lib/matrix-deps:ro
       - ./shared/bin/sentinel:/usr/local/bin/sentinel:ro
       - ../../build/ccsds_guard_dissector_plugin.so:/etc/sentinel/plugins.d/ccsds_guard_dissector_plugin.so:ro
+      - ./lib/openvino:/usr/local/lib/aerospace-ov:ro
     environment:
       - LD_LIBRARY_PATH=/usr/local/lib/matrix-deps
       - NODE_IDENTIFIER=UAV-ALPHA-LEADER
