@@ -162,7 +162,7 @@ services:
     ports:
       - "50052:50050/udp"
     volumes:
-      - ./configs/nodes/uav_charlie_recon.yaml:/etc/sentinel/sentinel.yaml:ro
+      - ./configs/nodes/uav_alpha_leader.yaml:/etc/sentinel/sentinel.yaml:ro
       - ./configs:/etc/sentinel/configs:ro
       - ./models:/etc/sentinel/models:rw
       - ./models:/opt/sentinel/models:rw
@@ -171,17 +171,20 @@ services:
       - ./shared/bin/sentinel:/usr/local/bin/sentinel:ro
       - /usr/local/lib/libccsds_guard.so:/usr/local/lib/libccsds_guard.so:ro
       - /usr/local/lib/blackbox/ccsds_guard_dissector_plugin.so:/etc/sentinel/plugins.d/ccsds_guard_dissector_plugin.so:ro
+      - /usr/lib/libopenvino.so.2400:/usr/local/lib/libopenvino.so.2400:ro
+      - /usr/lib/libopenvino_onnx_frontend.so.2400:/usr/local/lib/libopenvino_onnx_frontend.so.2400:ro
+      - /usr/lib/openvino-2024.0.0:/usr/local/lib/openvino-2024.0.0:ro
     environment:
-      - LD_LIBRARY_PATH=/usr/local/lib/matrix-deps
-      - NODE_IDENTIFIER=UAV-CHARLIE-RECON
+      - LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/matrix-deps
+      - LD_PRELOAD=/usr/local/lib/matrix-deps/libtbb.so.12:/usr/local/lib/libopenvino.so.2400
+      - NODE_IDENTIFIER=UAV-ALPHA-LEADER
       - SITE_IDENTIFIER=Tactical-Combat-Airspace
       - NODE_SITE=Aerospace-Swarm-Airspace
-      - PRIMARY_BACKEND=CPU_AVX512
+      - PRIMARY_BACKEND=INTEL_OPENVINO
       - VMWARE_VIRTUAL_NIC=true
       - XDP_MODE=SKB
-      - NEXUS_HOST=10.240.52.10
+      - NEXUS_HOST=10.240.0.10
       - NEXUS_PORT=50051
-
   # ============================================================================
   # PHYSICAL SENSORS: UAV ALPHA (Using device-runtime:latest)
   # ============================================================================
