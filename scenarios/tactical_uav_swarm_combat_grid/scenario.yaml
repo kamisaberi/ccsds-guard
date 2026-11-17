@@ -83,8 +83,11 @@ services:
       - shared-logs:/var/log/sentinel
       - ./shared/lib:/usr/local/lib/matrix-deps:ro
       - ./shared/bin/sentinel:/usr/local/bin/sentinel:ro
-      - ../../build/ccsds_guard_dissector_plugin.so:/etc/sentinel/plugins.d/ccsds_guard_dissector_plugin.so:ro
-      - ./lib/openvino:/usr/local/lib/aerospace-ov:ro
+      - /usr/local/lib/libccsds_guard.so:/usr/local/lib/libccsds_guard.so:ro
+      - /usr/local/lib/blackbox/ccsds_guard_dissector_plugin.so:/etc/sentinel/plugins.d/ccsds_guard_dissector_plugin.so:ro
+      - /usr/lib/libopenvino_onnx_frontend.so.2400:/usr/local/lib/libopenvino_onnx_frontend.so.2400:ro
+      - /usr/lib/openvino-2024.0.0/libopenvino_intel_cpu_plugin.so:/usr/local/lib/libopenvino_intel_cpu_plugin.so:ro
+      - /usr/lib/openvino-2024.0.0/libopenvino_auto_plugin.so:/usr/local/lib/libopenvino_auto_plugin.so:ro
     environment:
       - LD_LIBRARY_PATH=/usr/local/lib/aerospace-ov:/usr/local/lib/matrix-deps
       - NODE_IDENTIFIER=UAV-ALPHA-LEADER
