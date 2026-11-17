@@ -86,7 +86,7 @@ services:
       - ../../build/ccsds_guard_dissector_plugin.so:/etc/sentinel/plugins.d/ccsds_guard_dissector_plugin.so:ro
       - ./lib/openvino:/usr/local/lib/aerospace-ov:ro
     environment:
-      - LD_LIBRARY_PATH=/usr/local/lib/matrix-deps
+      - LD_LIBRARY_PATH=/usr/local/lib/aerospace-ov:/usr/local/lib/matrix-deps
       - NODE_IDENTIFIER=UAV-ALPHA-LEADER
       - SITE_IDENTIFIER=Tactical-Combat-Airspace
       - NODE_SITE=Aerospace-Swarm-Airspace
