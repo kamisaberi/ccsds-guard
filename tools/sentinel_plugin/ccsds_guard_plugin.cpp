@@ -56,6 +56,12 @@ static SentinelDissectorResult plugin_dissect(const SentinelRawPacket *packet)
         return res;
     }
 
+    // Only run Tier-1 Aerospace STANAG/CCSDS decoding on UDP datagrams (or raw test frames)
+    if (packet->transport_proto != 17 && packet->transport_proto != 0)
+    {
+        return res;
+    }
+
     const uint8_t *payload_ptr = packet->data;
     size_t payload_len = packet->length;
 
@@ -64,12 +70,6 @@ static SentinelDissectorResult plugin_dissect(const SentinelRawPacket *packet)
     {
         payload_ptr = packet->data + 42;
         payload_len = packet->length - 42;
-
-        // Only run Tier-1 Aerospace STANAG/CCSDS decoding on UDP datagrams (or raw test frames)
-        if (packet->transport_proto != 17 && packet->transport_proto != 0)
-        {
-            return res;
-        }
     }
 
     std::span<const uint8_t> frame(payload_ptr, payload_len);
