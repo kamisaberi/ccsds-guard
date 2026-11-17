@@ -5,7 +5,7 @@ node:
   site_identifier: "Tactical-Combat-Airspace"
   hardware:
     type: "DEVICE_VIRTUAL_TPM"
-    primary_backend: "CPU_AVX512"
+    primary_backend: "INTEL_OPENVINO"
     xdp_driver_mode: "SKB"
 
 ui_profile:
@@ -46,6 +46,7 @@ subsystems:
   monitored_protocols: ["STANAG4586", "CCSDS133"]
   ebpf_line_rate_drop: true
 
+# --- STAGE 2 & STAGE 3 SENSOR-TO-MODEL ROUTING DAG ---
 routes:
   - sensor_id: UAV-Alpha-Demod-01
     sensor_type: TACTICAL_RADIO_SDR
@@ -53,8 +54,23 @@ routes:
     match:
       port: 50050
       transport: udp
+      package_id: org.aryorithm.package.stanag_telecommand_guard
       plugin_id: ccsds_guard_dissector_plugin.so
       owner_subsystem: 18_cps_sec
       execution_mode: CASCADE_SHORT_CIRCUIT
-      latency_budget_ns: 25000
-      threshold_drop: 0.90
+      model_id: network_threat_int8.onnx
+      silicon_target: INTEL_OPENVINO
+      format: ONNX
+      precision: INT8
+      latency_budget_ns: 20000
+      threshold_drop: 0.85
+      xai_explainer: MRD_XAI
+
+# --- STAGE 4 CROSS-MODAL FUSION INVARIANT ---
+fusion_rules:
+  - correlation_id: UAV_ALPHA_IMU_BLINDING_PROTECTION
+    cyber_sensor_id: UAV-Alpha-Demod-01
+    cyber_max_score: 0.20
+    physical_sensor_id: ALPHA_S050_IMU
+    physical_min_temp: 45.0
+    action: KERNEL_DROP_AND_ISOLATE
