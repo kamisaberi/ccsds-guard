@@ -56,7 +56,9 @@ services:
       retries: 5
       start_period: 10s
 
-  # ============================================================================
+
+
+# ============================================================================
   # EDGE SENTRY 01: UAV ALPHA (Swarm Leader)
   # ============================================================================
   uav-alpha:
@@ -97,8 +99,9 @@ services:
       - PRIMARY_BACKEND=INTEL_OPENVINO
       - VMWARE_VIRTUAL_NIC=true
       - XDP_MODE=SKB
-      - NEXUS_HOST=10.240.0.10
+      - NEXUS_HOST=10.240.52.10
       - NEXUS_PORT=50051
+
   # ============================================================================
   # EDGE SENTRY 02: UAV BRAVO (Wingman 1)
   # ============================================================================
@@ -119,7 +122,7 @@ services:
     ports:
       - "50051:50050/udp"
     volumes:
-      - ./configs/nodes/uav_alpha_leader.yaml:/etc/sentinel/sentinel.yaml:ro
+      - ./configs/nodes/uav_bravo_wingman.yaml:/etc/sentinel/sentinel.yaml:ro
       - ./configs:/etc/sentinel/configs:ro
       - ./models:/etc/sentinel/models:rw
       - ./models:/opt/sentinel/models:rw
@@ -134,14 +137,15 @@ services:
     environment:
       - LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/matrix-deps
       - LD_PRELOAD=/usr/local/lib/matrix-deps/libtbb.so.12:/usr/local/lib/libopenvino.so.2400
-      - NODE_IDENTIFIER=UAV-ALPHA-LEADER
+      - NODE_IDENTIFIER=UAV-BRAVO-WINGMAN
       - SITE_IDENTIFIER=Tactical-Combat-Airspace
       - NODE_SITE=Aerospace-Swarm-Airspace
-      - PRIMARY_BACKEND=INTEL_OPENVINO
+      - PRIMARY_BACKEND=NVIDIA_TENSORRT
       - VMWARE_VIRTUAL_NIC=true
       - XDP_MODE=SKB
-      - NEXUS_HOST=10.240.0.10
+      - NEXUS_HOST=10.240.52.10
       - NEXUS_PORT=50051
+
   # ============================================================================
   # EDGE SENTRY 03: UAV CHARLIE (Recon Escort)
   # ============================================================================
@@ -162,7 +166,7 @@ services:
     ports:
       - "50052:50050/udp"
     volumes:
-      - ./configs/nodes/uav_alpha_leader.yaml:/etc/sentinel/sentinel.yaml:ro
+      - ./configs/nodes/uav_charlie_recon.yaml:/etc/sentinel/sentinel.yaml:ro
       - ./configs:/etc/sentinel/configs:ro
       - ./models:/etc/sentinel/models:rw
       - ./models:/opt/sentinel/models:rw
@@ -177,14 +181,16 @@ services:
     environment:
       - LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/matrix-deps
       - LD_PRELOAD=/usr/local/lib/matrix-deps/libtbb.so.12:/usr/local/lib/libopenvino.so.2400
-      - NODE_IDENTIFIER=UAV-ALPHA-LEADER
+      - NODE_IDENTIFIER=UAV-CHARLIE-RECON
       - SITE_IDENTIFIER=Tactical-Combat-Airspace
       - NODE_SITE=Aerospace-Swarm-Airspace
-      - PRIMARY_BACKEND=INTEL_OPENVINO
+      - PRIMARY_BACKEND=ROCKCHIP_RKNN
       - VMWARE_VIRTUAL_NIC=true
       - XDP_MODE=SKB
-      - NEXUS_HOST=10.240.0.10
+      - NEXUS_HOST=10.240.52.10
       - NEXUS_PORT=50051
+
+
   # ============================================================================
   # PHYSICAL SENSORS: UAV ALPHA (Using device-runtime:latest)
   # ============================================================================
