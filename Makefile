@@ -144,10 +144,9 @@ install: build init
 	@echo -e "$(CYAN)[+] Installing ccsds-guard System-Wide...$(RESET)"
 	@sudo $(MAKE) -C $(BUILD_DIR) install
 	@sudo ldconfig
-	@mkdir -p $(SCENARIOS_DIR)/plugins
-	@cp -f $(BUILD_DIR)/ccsds_guard_dissector_plugin.so $(SCENARIOS_DIR)/plugins/
-	@echo -e "$(GREEN)[+] Installed /usr/local/lib/libccsds_guard.so, /usr/local/bin/aryo-aerospace.$(RESET)"
+	@echo -e "$(GREEN)[+] Installed /usr/local/lib/libccsds_guard.so, /usr/local/lib/blackbox/ccsds_guard_dissector_plugin.so, /usr/local/bin/aryo-aerospace.$(RESET)"
 
+	
 sync-matrix: build
 	@echo -e "$(CYAN)[+] Syncing shared libraries to sentinel-matrix...$(RESET)"
 	@mkdir -p $(MATRIX_DIR)/shared/lib
