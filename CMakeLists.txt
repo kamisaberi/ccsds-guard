@@ -223,3 +223,19 @@ target_link_libraries(test_plugin PRIVATE
     ${CMAKE_DL_LIBS}
 )
 add_test(NAME TestSentinelPlugin COMMAND test_plugin)
+
+
+
+# -----------------------------------------------------------------------------
+# TIER-1 (LOGIC) + TIER-2 (ONNX INFERENCE) PIPELINE TEST
+# -----------------------------------------------------------------------------
+add_executable(test_tier1_tier2_pipeline tests/test_tier1_tier2_pipeline.cpp)
+target_link_libraries(test_tier1_tier2_pipeline PRIVATE
+    ccsds_guard
+    -Wl,--no-as-needed
+    ${BLACKBOX_LIB}
+    ${XINFER_LIB}
+    -Wl,--as-needed
+    ${CMAKE_DL_LIBS}
+)
+add_test(NAME TestTier1Tier2Pipeline COMMAND test_tier1_tier2_pipeline)
