@@ -1,0 +1,70 @@
+{
+  "attacks": {
+    "uav-replay-blast": {
+      "id": "STANAG_REPLAY",
+      "name": "STANAG 128-Bit Anti-Replay Blast",
+      "multiplexer_fault": { "action": "step_increase", "value": 40.0 },
+      "signal_profile": "discrete_event"
+    },
+    "uav-gps-spoof": {
+      "id": "GPS_TELEPORT",
+      "name": "5km GPS Kinematic Spoofing Audit",
+      "multiplexer_fault": { "action": "drop_to_val", "value": 12.0 },
+      "signal_profile": "flatline_freeze"
+    },
+    "uav-desync-audit": {
+      "id": "TIMESTAMP_DESYNC",
+      "name": "Telemetry PTP Clock Jitter (>500ms)",
+      "multiplexer_fault": { "action": "step_increase", "value": 18.0 },
+      "signal_profile": "coherence_decay"
+    },
+    "uav-ccsds-sec": {
+      "id": "CCSDS_TAMPER",
+      "name": "CCSDS 133 SPI/CRC Security Audit",
+      "multiplexer_fault": { "action": "step_increase", "value": 55.0 },
+      "signal_profile": "impulse_shock"
+    },
+    "uav-mesh-cohesion": {
+      "id": "MESH_BYZANTINE",
+      "name": "Byzantine Swarm Mesh Fault Audit",
+      "multiplexer_fault": { "action": "harmonic_multiplier", "value": 2.4 },
+      "signal_profile": "harmonic_sideband"
+    },
+    "uav-airgap-tripwire": {
+      "id": "AIRGAP_TRIPWIRE",
+      "name": "Sub-15ns Actuator Air-Gap Latch",
+      "multiplexer_fault": { "action": "drop_to_val", "value": 0.0 },
+      "signal_profile": "flatline_freeze"
+    }
+  },
+  "categories": {
+    "aerospace_ccsds": {
+      "plot_archetype": "discrete_divergence",
+      "lab_module": "uav-replay-blast",
+      "physics_engine": "ccsds_guard_engine",
+      "chart_config": { "primary_title": "Telecommand Gate Anomaly Score", "secondary_title": "128-Bit Replay & CRC Violation Density", "unit": "ns", "min_val": 0.0, "max_val": 120.0, "safe_low": 0.0, "safe_high": 45.0 },
+      "attacks": ["uav-replay-blast", "uav-gps-spoof", "uav-desync-audit", "uav-ccsds-sec", "uav-mesh-cohesion", "uav-airgap-tripwire"]
+    },
+    "avionics": {
+      "plot_archetype": "spatial_kinematic",
+      "lab_module": "uav-gps-spoof",
+      "physics_engine": "generic_ode",
+      "chart_config": { "primary_title": "Pitot Airspeed / Altimeter vs Truth", "secondary_title": "Control Barrier Divergence |Measured - Truth|", "unit": "knots", "min_val": 0.0, "max_val": 200.0, "safe_low": 50.0, "safe_high": 160.0 },
+      "attacks": ["uav-gps-spoof", "uav-airgap-tripwire", "aoa-freeze", "uav-ccsds-sec"]
+    },
+    "kinematic": {
+      "plot_archetype": "spatial_kinematic",
+      "lab_module": "uav-gps-spoof",
+      "physics_engine": "generic_ode",
+      "chart_config": { "primary_title": "3-Axis Flight Gyro vs Inertial Truth", "secondary_title": "Kinematic Bound Divergence (ΔV <= 80 m/s)", "unit": "deg/s", "min_val": -10.0, "max_val": 50.0, "safe_low": 0.0, "safe_high": 30.0 },
+      "attacks": ["uav-gps-spoof", "uav-mesh-cohesion", "uav-airgap-tripwire", "tvc-gimbal-lock"]
+    },
+    "rf_em": {
+      "plot_archetype": "coherence_snr",
+      "lab_module": "uav-desync-audit",
+      "physics_engine": "generic_ode",
+      "chart_config": { "primary_title": "GNSS C/N0 Anti-Spoofing Carrier", "secondary_title": "RF Spoofing & Jitter Density", "unit": "dBm", "min_val": -120.0, "max_val": -40.0, "safe_low": -95.0, "safe_high": -60.0 },
+      "attacks": ["uav-desync-audit", "gnss-spoof", "uav-replay-blast", "hpm-surge"]
+    }
+  }
+}
