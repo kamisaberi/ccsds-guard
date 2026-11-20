@@ -39,6 +39,7 @@ services:
     volumes:
       - ./configs:/opt/sentinel-nexus/configs:ro
       - ./models:/opt/sentinel-nexus/models
+      - ./pcaps:/opt/sentinel-nexus/pcaps:ro
       - shared-datasets:/var/lib/sentinel-nexus/forge_datasets
       - shared-logs:/var/log/sentinel-nexus
       - ./shared/lib:/usr/local/lib/matrix-deps:ro
