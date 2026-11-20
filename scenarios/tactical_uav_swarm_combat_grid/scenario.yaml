@@ -324,3 +324,54 @@ services:
     volumes:
       - ./tools/ew_spoofer.py:/app/spoofer.py:ro
     command: ["python3", "-u", "/app/spoofer.py"]
+
+  # ============================================================================
+  # DEDICATED REAL-WORLD APPARATUS & DUAL-PCAP STREAMERS (apparatus-runtime)
+  # ============================================================================
+  apparatus-radar:
+    image: sentinel-matrix/apparatus-runtime:latest
+    container_name: matrix-apparatus-radar
+    hostname: apparatus-radar.matrix.internal
+    restart: unless-stopped
+    depends_on:
+      nexus: { condition: service_healthy }
+    networks:
+      uav-combat-net:
+        ipv4_address: "10.240.52.131"
+    ports:
+      - "18091:8090"
+    volumes:
+      - ./pcaps:/app/pcaps:ro
+    command: [
+      "--type", "radar_360",
+      "--name", "Tactical-Swarm-Radar-360",
+      "--nominal-pcap", "/app/pcaps/uav_nominal_flight.pcap",
+      "--attack-pcap", "/app/pcaps/uav_gps_teleport_attack.pcap",
+      "--target-ip", "10.240.52.121",
+      "--target-port", "50050",
+      "--api-port", "8090"
+    ]
+
+  apparatus-flir:
+    image: sentinel-matrix/apparatus-runtime:latest
+    container_name: matrix-apparatus-flir
+    hostname: apparatus-flir.matrix.internal
+    restart: unless-stopped
+    depends_on:
+      nexus: { condition: service_healthy }
+    networks:
+      uav-combat-net:
+        ipv4_address: "10.240.52.132"
+    ports:
+      - "18092:8090"
+    volumes:
+      - ./pcaps:/app/pcaps:ro
+    command: [
+      "--type", "flir_thermal",
+      "--name", "Charlie-FLIR-Radiometric-Gimbal",
+      "--nominal-pcap", "/app/pcaps/flir_thermal_baseline.pcap",
+      "--attack-pcap", "/app/pcaps/flir_laser_dazzle_attack.pcap",
+      "--target-ip", "10.240.52.124",
+      "--target-port", "50050",
+      "--api-port", "8090"
+    ]
