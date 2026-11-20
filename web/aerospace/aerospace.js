@@ -50,14 +50,14 @@
                         }
                     });
                 }
-            } catch (_) {}
+            } catch (_) { }
 
             try {
                 const f = await fetch(`${FLIR_API}/telemetry`, { cache: "no-store" });
                 if (f.ok) {
                     this.flir = await f.json();
                 }
-            } catch (_) {}
+            } catch (_) { }
         }
     };
 
@@ -552,7 +552,7 @@
                         <span style="font-size:12px; font-weight:800; color:#00E5FF; letter-spacing:0.1em;">
                             DECK.GL 3D TACTICAL SWARM &amp; SATCOM THEATRE C2
                         </span>
-                        <span class="badge badge-green" style="font-size:9px;">7-LAYER 3D THEATRE ENGINE</span>
+                        <span class="badge badge-green" style="font-size:9px;">SYNCED TO LIVE RADAR (:18091)</span>
                         <span class="badge badge-cyan" style="font-size:9px;">STANAG 4586 + CCSDS 133</span>
                     </div>
 
@@ -618,19 +618,19 @@
                     <!-- TOP-RIGHT SWARM TELEMETRY & HARDWARE ROOTS -->
                     <div class="c2-hud-panel" style="top:12px; right:12px; min-width:280px;">
                         <div style="color:#00FFA3; font-weight:800; margin-bottom:6px;">
-                            ACTIVE SWARM ENCLAVE TELEMETRY
+                            ACTIVE SWARM ENCLAVE TELEMETRY (RADAR SYNC)
                         </div>
                         <div style="border-bottom:1px solid #1E293B; padding-bottom:5px; margin-bottom:5px;">
                             <div style="color:#00FFA3; font-weight:700;">● UAV-ALPHA (LEADER) &bull; 10.240.52.121</div>
-                            <div style="color:#8A99AD; font-size:9px;">ALT: 120.4m | V: 24.2 m/s | STANAG: <b style="color:#00FFA3;">PASS (23.77ns)</b></div>
+                            <div id="c2-hud-alpha" style="color:#8A99AD; font-size:9px;">ALT: 120.4m | V: 24.2 m/s | STANAG: <b style="color:#00FFA3;">PASS (23.77ns)</b></div>
                         </div>
                         <div style="border-bottom:1px solid #1E293B; padding-bottom:5px; margin-bottom:5px;">
                             <div style="color:#00E5FF; font-weight:700;">● UAV-BRAVO (WING-1) &bull; 10.240.52.123</div>
-                            <div style="color:#8A99AD; font-size:9px;">ALT: 118.0m | V: 24.0 m/s | GPS GUARD: <b id="bravo-guard-state" style="color:#FF3366;">SPOOF BLOCKED</b></div>
+                            <div style="color:#8A99AD; font-size:9px;"><span id="c2-hud-bravo">ALT: 118.0m | V: 24.0 m/s</span> | GPS GUARD: <b id="bravo-guard-state" style="color:#FF3366;">SPOOF BLOCKED</b></div>
                         </div>
                         <div style="border-bottom:1px solid #1E293B; padding-bottom:5px; margin-bottom:5px;">
                             <div style="color:#FFB800; font-weight:700;">● UAV-CHARLIE (RECON) &bull; 10.240.52.124</div>
-                            <div style="color:#8A99AD; font-size:9px;">ALT: 145.2m | LIDAR: 145.2m | FLIR: <b style="color:#00FFA3;">STREAMING</b></div>
+                            <div id="c2-hud-charlie" style="color:#8A99AD; font-size:9px;">ALT: 145.2m | V: 24.4 m/s | FLIR: <b style="color:#00FFA3;">STREAMING</b></div>
                         </div>
                         <div>
                             <div style="color:#C084FC; font-weight:700;">● SAT-CCSDS-133 (LEO) &bull; SPI: 0x0100</div>
@@ -649,7 +649,7 @@
                     <!-- BOTTOM-RIGHT CBF INVARIANT METRICS -->
                     <div class="c2-hud-panel" style="bottom:12px; right:12px; border-color:#00FFA3;">
                         <div style="color:#00FFA3; font-weight:800;">CBF BARRIER h(x) = v_max - ||v|| &ge; 0</div>
-                        <div>Safety Margin: <b style="color:#00E5FF;">+55.8 m/s</b> | Actuator Air-Gap: <b style="color:#00FFA3;">ARMED (&lt; 15ns)</b></div>
+                        <div>Safety Margin: <b id="c2-cbf-margin" style="color:#00E5FF;">+55.8 m/s</b> | Actuator Air-Gap: <b style="color:#00FFA3;">ARMED (&lt; 15ns)</b></div>
                     </div>
                 </div>
             </div>
@@ -690,11 +690,17 @@
                 Object.keys(formMap).forEach(id => document.getElementById(id)?.classList.remove("active-green"));
                 e.currentTarget.classList.add("active-green");
 
+                const payload = JSON.stringify({ formation: currentFormation });
+                fetch(`${RADAR_API}/formation`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: payload
+                }).catch(() => { });
                 fetch(`http://${HOST}:18090/formation`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ formation: currentFormation })
-                }).catch(() => {});
+                    body: payload
+                }).catch(() => { });
             });
         });
 
@@ -791,62 +797,105 @@
             { id: "WP-04 [EGRESS]", x: 180, y: 260, z: 130 }
         ];
 
-        let dockerTargetAlpha = { x: 0, y: 80, z: 120, heading: 0, roll: 0, v_mps: 24.2 };
-        let dockerTargetBravo = { x: -135, y: -25, z: 118, heading: 0, roll: 0, v_mps: 24.0 };
-        let dockerTargetCharlie = { x: 135, y: -25, z: 145, heading: 0, roll: 0, v_mps: 24.4 };
-        let dockerTargetSat = { x: 0, y: 0, z: 420 };
-        let dockerGcsOnline = false;
-        let dockerLastSeq = 100;
+        let radarTargetAlpha = { x: 0, y: 80, z: 120, heading: 0, roll: 0, v_mps: 24.2, cbf_h: 55.8 };
+        let radarTargetBravo = { x: -135, y: -25, z: 118, heading: 0, roll: 0, v_mps: 24.0, cbf_h: 56.0 };
+        let radarTargetCharlie = { x: 135, y: -25, z: 145, heading: 0, roll: 0, v_mps: 24.4, cbf_h: 55.6 };
+        let radarTargetSat = null;
+        let radarFeedOnline = false;
+        let radarLastSeq = 100;
 
-        async function pollDockerGcsTelemetry() {
+        function normalizeDrone(raw, fallback) {
+            if (!raw) return fallback;
+            const rollRad = (raw.roll !== undefined)
+                ? Number(raw.roll)
+                : ((Number(raw.roll_deg || 0) * Math.PI) / 180.0);
+            return {
+                x: Number(raw.x ?? fallback.x),
+                y: Number(raw.y ?? fallback.y),
+                z: Number(raw.z ?? fallback.z),
+                heading: Number(raw.heading ?? fallback.heading),
+                roll: rollRad,
+                v_mps: Number(raw.v_mps ?? fallback.v_mps),
+                cbf_h: Number(raw.cbf_h ?? (80.0 - Number(raw.v_mps ?? 24.0)))
+            };
+        }
+
+        // Poll RADAR (:18091/telemetry) as primary single source of truth (fallback :18090 if offline)
+        async function pollRadarSyncedTelemetry() {
+            let data = null;
             try {
-                const resp = await fetch(`http://${HOST}:18090/telemetry`, { cache: "no-store" });
-                if (resp.ok) {
-                    const data = await resp.json();
-                    dockerGcsOnline = true;
-                    dockerLastSeq = data.seq || dockerLastSeq;
-                    if (data.drones) {
-                        if (data.drones.alpha) dockerTargetAlpha = data.drones.alpha;
-                        if (data.drones.bravo) dockerTargetBravo = data.drones.bravo;
-                        if (data.drones.charlie) dockerTargetCharlie = data.drones.charlie;
-                    }
-                    if (data.sat) dockerTargetSat = data.sat;
-                } else {
-                    dockerGcsOnline = false;
+                const resp = await fetch(`${RADAR_API}/telemetry`, { cache: "no-store" });
+                if (resp.ok) data = await resp.json();
+            } catch (_) { }
+
+            if (!data) {
+                try {
+                    const fb = await fetch(`http://${HOST}:18090/telemetry`, { cache: "no-store" });
+                    if (fb.ok) data = await fb.json();
+                } catch (_) { }
+            }
+
+            if (data) {
+                radarFeedOnline = true;
+                radarLastSeq = data.seq || radarLastSeq;
+                if (data.drones) {
+                    radarTargetAlpha = normalizeDrone(data.drones.alpha, radarTargetAlpha);
+                    radarTargetBravo = normalizeDrone(data.drones.bravo, radarTargetBravo);
+                    radarTargetCharlie = normalizeDrone(data.drones.charlie, radarTargetCharlie);
                 }
-            } catch (e) {
-                dockerGcsOnline = false;
+                radarTargetSat = data.sat || null;
+
+                // Update top-right HUD live from RADAR telemetry
+                const hudA = document.getElementById("c2-hud-alpha");
+                if (hudA) hudA.innerHTML = `ALT: ${radarTargetAlpha.z.toFixed(1)}m | V: ${radarTargetAlpha.v_mps.toFixed(1)} m/s | STANAG: <b style="color:#00FFA3;">PASS (23.77ns)</b>`;
+                const hudB = document.getElementById("c2-hud-bravo");
+                if (hudB) hudB.textContent = `ALT: ${radarTargetBravo.z.toFixed(1)}m | V: ${radarTargetBravo.v_mps.toFixed(1)} m/s`;
+                const hudC = document.getElementById("c2-hud-charlie");
+                if (hudC) hudC.innerHTML = `ALT: ${radarTargetCharlie.z.toFixed(1)}m | V: ${radarTargetCharlie.v_mps.toFixed(1)} m/s | FLIR: <b style="color:#00FFA3;">STREAMING</b>`;
+                const cbfEl = document.getElementById("c2-cbf-margin");
+                if (cbfEl) cbfEl.textContent = `+${radarTargetAlpha.cbf_h.toFixed(1)} m/s`;
+            } else {
+                radarFeedOnline = false;
             }
         }
 
-        gcsPollTimer = setInterval(pollDockerGcsTelemetry, 100);
-        pollDockerGcsTelemetry();
+        gcsPollTimer = setInterval(pollRadarSyncedTelemetry, 100);
+        pollRadarSyncedTelemetry();
+
+        // Shortest-angle angular interpolation so airframe nose turns smoothly with RADAR heading
+        function lerpAngle(cur, target, alpha) {
+            let diff = ((target - cur + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+            return cur + diff * alpha;
+        }
 
         function animateTheatre() {
             c2AnimId = requestAnimationFrame(animateTheatre);
             tick += 0.016;
 
-            posAlpha.x += (dockerTargetAlpha.x - posAlpha.x) * 0.12;
-            posAlpha.y += (dockerTargetAlpha.y - posAlpha.y) * 0.12;
-            posAlpha.z += (dockerTargetAlpha.z - posAlpha.z) * 0.12;
-            posAlpha.heading = dockerTargetAlpha.heading || 0;
-            posAlpha.roll = dockerTargetAlpha.roll || 0;
+            const k = 0.22;
+            posAlpha.x += (radarTargetAlpha.x - posAlpha.x) * k;
+            posAlpha.y += (radarTargetAlpha.y - posAlpha.y) * k;
+            posAlpha.z += (radarTargetAlpha.z - posAlpha.z) * k;
+            posAlpha.heading = lerpAngle(posAlpha.heading, radarTargetAlpha.heading, k);
+            posAlpha.roll += (radarTargetAlpha.roll - posAlpha.roll) * k;
 
-            posBravo.x += (dockerTargetBravo.x - posBravo.x) * 0.12;
-            posBravo.y += (dockerTargetBravo.y - posBravo.y) * 0.12;
-            posBravo.z += (dockerTargetBravo.z - posBravo.z) * 0.12;
-            posBravo.heading = dockerTargetBravo.heading || 0;
-            posBravo.roll = dockerTargetBravo.roll || 0;
+            posBravo.x += (radarTargetBravo.x - posBravo.x) * k;
+            posBravo.y += (radarTargetBravo.y - posBravo.y) * k;
+            posBravo.z += (radarTargetBravo.z - posBravo.z) * k;
+            posBravo.heading = lerpAngle(posBravo.heading, radarTargetBravo.heading, k);
+            posBravo.roll += (radarTargetBravo.roll - posBravo.roll) * k;
 
-            posCharlie.x += (dockerTargetCharlie.x - posCharlie.x) * 0.12;
-            posCharlie.y += (dockerTargetCharlie.y - posCharlie.y) * 0.12;
-            posCharlie.z += (dockerTargetCharlie.z - posCharlie.z) * 0.12;
-            posCharlie.heading = dockerTargetCharlie.heading || 0;
-            posCharlie.roll = dockerTargetCharlie.roll || 0;
+            posCharlie.x += (radarTargetCharlie.x - posCharlie.x) * k;
+            posCharlie.y += (radarTargetCharlie.y - posCharlie.y) * k;
+            posCharlie.z += (radarTargetCharlie.z - posCharlie.z) * k;
+            posCharlie.heading = lerpAngle(posCharlie.heading, radarTargetCharlie.heading, k);
+            posCharlie.roll += (radarTargetCharlie.roll - posCharlie.roll) * k;
 
-            const posSat = { x: dockerTargetSat.x, y: dockerTargetSat.y, z: dockerTargetSat.z };
+            const posSat = radarTargetSat
+                ? { x: radarTargetSat.x, y: radarTargetSat.y, z: radarTargetSat.z }
+                : { x: Math.sin(tick * 0.25) * 460.0, y: Math.cos(tick * 0.25) * 280.0, z: 420.0 };
 
-            if (dockerGcsOnline && Math.floor(tick * 60) % 2 === 0) {
+            if (radarFeedOnline && Math.floor(tick * 60) % 2 === 0) {
                 trailAlpha.push({ x: posAlpha.x, y: posAlpha.y, z: posAlpha.z });
                 trailBravo.push({ x: posBravo.x, y: posBravo.y, z: posBravo.z });
                 trailCharlie.push({ x: posCharlie.x, y: posCharlie.y, z: posCharlie.z });
@@ -867,13 +916,12 @@
             render7LayerTheatre(hudCanvas, {
                 posAlpha, posBravo, posCharlie, posGcs, posEw, posSat,
                 trailAlpha, trailBravo, trailCharlie, waypointGates, tick,
-                dockerGcsOnline, dockerLastSeq
+                dockerGcsOnline: radarFeedOnline, dockerLastSeq: radarLastSeq
             });
         }
 
         animateTheatre();
     }
-
     // ========================================================================
     // 3. 7-LAYER 3D TACTICAL THEATRE RENDERING PIPELINE (FULL ORIGINAL)
     // ========================================================================
