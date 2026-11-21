@@ -1,11 +1,11 @@
 // File: /home/kami/ccsds-guard/web/aerospace/aerospace.js
 // ==============================================================================
 // ARYORITHM AEROSPACE PLUGIN:
-//   1. Tactical 360° Swarm Airspace Radar (Alpha Leader)
-//   2. Ground Vehicle Tracking Radar - GMTI (Charlie Recon)
-//   3. Swarm Formation & Intercept HUD (Bravo Wingman)
-//   4. Optical FLIR Radiometric Gimbal (Thermal)
-//   5. Full 7-Layer 3D Tactical Swarm & Satcom Theatre C2 (:18090)
+//   1. Tactical 360° Swarm Airspace Radar (Alpha Leader - :18091)
+//   2. Ground Vehicle Tracking Radar - GMTI (Charlie Recon - :18091)
+//   3. Swarm Formation & Intercept HUD (Bravo Wingman - :18091)
+//   4. Optical FLIR Radiometric Gimbal (Thermal - :18092)
+//   5. Full 7-Layer 3D Tactical Swarm & Satcom Theatre C2 (Synced to :18091 / :18090)
 // ==============================================================================
 
 (function () {
@@ -15,7 +15,9 @@
     const RADAR_API = `http://${HOST}:18091`;
     const FLIR_API = `http://${HOST}:18092`;
 
-    // Shared Live Telemetry Bus
+    // ========================================================================
+    // 0. SHARED LIVE TELEMETRY BUS (Polls dedicated apparatus-runtime containers)
+    // ========================================================================
     const TelemetryBus = {
         radar: null,
         flir: null,
@@ -51,12 +53,12 @@
                         }
                     });
                 }
-            } catch (_) {}
+            } catch (_) { }
 
             try {
                 const f = await fetch(`${FLIR_API}/telemetry`, { cache: "no-store" });
                 if (f.ok) this.flir = await f.json();
-            } catch (_) {}
+            } catch (_) { }
         }
     };
 
@@ -120,7 +122,6 @@
         ctx.moveTo(cx, cy - maxR); ctx.lineTo(cx, cy + maxR);
         ctx.stroke();
 
-        // Sweep
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(state.sweep);
@@ -260,7 +261,6 @@
         const radarR = h - 60;
         const sectorAngle = Math.PI * 0.44; // 80° forward recon sector
 
-        // Sector Arc & Range Bins (300m, 600m, 900m, 1200m)
         const leftAngle = -Math.PI / 2 - sectorAngle / 2;
         const rightAngle = -Math.PI / 2 + sectorAngle / 2;
 
@@ -278,7 +278,6 @@
             ctx.fillText(`${(idx + 1) * 300}m`, originX + 6, originY - radarR * f + 11);
         });
 
-        // Azimuth Ray Lines
         [-sectorAngle / 2, -sectorAngle / 4, 0, sectorAngle / 4, sectorAngle / 2].forEach(a => {
             const rayAngle = -Math.PI / 2 + a;
             ctx.strokeStyle = "rgba(0, 229, 255, 0.12)";
@@ -288,7 +287,6 @@
             ctx.stroke();
         });
 
-        // Sector Sweep Beam (Wandering Back & Forth across the 80° Sector)
         const sweepPhase = Math.sin(state.sweep);
         const currentSweepAngle = -Math.PI / 2 + (sweepPhase * (sectorAngle / 2));
 
@@ -306,7 +304,6 @@
         ctx.fill();
         ctx.restore();
 
-        // Ground Road Grid Simulation (Terrain Corridor for Convoy)
         ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
         ctx.lineWidth = 1.2;
         ctx.beginPath();
@@ -316,7 +313,6 @@
         ctx.lineTo(originX + 110, originY - radarR);
         ctx.stroke();
 
-        // 4 Dynamic Ground Vehicle Tracks moving down the road
         const now = Date.now() / 1000.0;
         const groundTargets = [
             { id: "TGT-01", name: "LEAD CONVOY", range_m: 840, bearing_deg: 14.0, speed_kmh: 48.0, doppler: +13.3 },
@@ -326,7 +322,6 @@
         ];
 
         groundTargets.forEach((tgt, idx) => {
-            // Convoy moves forward along road with slight dynamic oscillation
             const movingRange = tgt.range_m - ((now * (tgt.speed_kmh / 3.6) + idx * 80) % 700);
             const normR = (movingRange / 1200.0) * radarR;
             const bRad = -Math.PI / 2 + ((tgt.bearing_deg - 15.0) * (Math.PI / 180.0));
@@ -334,25 +329,21 @@
             const tx = originX + Math.cos(bRad) * normR;
             const ty = originY + Math.sin(bRad) * normR;
 
-            // Target Reticle Box
             ctx.strokeStyle = isAlert ? "#FF3366" : "#00FFA3";
             ctx.lineWidth = 1.6;
             ctx.strokeRect(tx - 12, ty - 8, 24, 16);
 
-            // Ground Target Point
             ctx.fillStyle = isAlert ? "#FF3366" : "#00FFA3";
             ctx.beginPath();
             ctx.arc(tx, ty, 3.5, 0, Math.PI * 2);
             ctx.fill();
 
-            // Velocity Vector Line pointing along road
             ctx.strokeStyle = "#00E5FF";
             ctx.beginPath();
             ctx.moveTo(tx, ty);
             ctx.lineTo(tx - 4, ty + 18);
             ctx.stroke();
 
-            // Target Data Label Block
             ctx.font = "bold 9.5px 'JetBrains Mono', monospace";
             ctx.fillStyle = isAlert ? "#FF3366" : "#00FFA3";
             ctx.fillText(`${tgt.id}: ${tgt.name}`, tx + 16, ty - 1);
@@ -361,7 +352,6 @@
             ctx.fillText(`RNG:${movingRange.toFixed(0)}m SPD:${tgt.speed_kmh}km/h DOP:${tgt.doppler}m/s`, tx + 16, ty + 10);
         });
 
-        // Top Header Strip
         ctx.fillStyle = "rgba(7, 11, 20, 0.88)";
         ctx.fillRect(0, 0, w, 28);
         ctx.fillRect(0, h - 26, w, 26);
@@ -572,8 +562,6 @@
     // ========================================================================
     // 2. APPARATUS PLUGIN REGISTRATIONS (ALPHA = 360° RADAR, CHARLIE = VEHICLE RADAR)
     // ========================================================================
-
-    // Charlie's Dedicated Ground Vehicle Tracking Radar
     window.SentinelUI.registerApparatus({
         id: "ground_vehicle_tracking_radar",
         title: "TACTICAL VEHICLE TRACKING RADAR (CHARLIE RECON)",
@@ -593,7 +581,6 @@
         })
     });
 
-    // Alpha Leader's 360° Tactical Swarm Airspace Radar
     window.SentinelUI.registerApparatus({
         id: "tactical_360_radar",
         title: "TACTICAL 360° UAV SWARM RADAR (ALPHA LEADER)",
@@ -613,7 +600,6 @@
         })
     });
 
-    // Bravo Wingman's Formation HUD
     window.SentinelUI.registerApparatus({
         id: "formation_intercept_hud",
         title: "SWARM FORMATION & INTERCEPT HUD (BRAVO WINGMAN)",
@@ -632,7 +618,6 @@
         })
     });
 
-    // Optical FLIR Gimbal
     window.SentinelUI.registerApparatus({
         id: "flir_radiometric_gimbal",
         title: "OPTICAL FLIR RADIOMETRIC GIMBAL",
@@ -651,7 +636,6 @@
         })
     });
 
-    // Legacy Node Adapter
     window.SentinelUI.registerNodeAdapter({
         id: "aerospace_swarm_adapter",
         matches: isAerospaceNode,
@@ -665,7 +649,7 @@
     });
 
     // ========================================================================
-    // 3. 7-LAYER 3D TACTICAL SWARM C2 (FULL ORIGINAL SYNCHRONIZED)
+    // 3. DECK.GL 7-LAYER 3D TACTICAL SWARM & SATCOM THEATRE C2 (FULL ORIGINAL)
     // ========================================================================
     const ORIGIN_LON = 4.9000;
     const ORIGIN_LAT = 52.3700;
@@ -676,8 +660,21 @@
     let isJammingActive = true;
     let lockedEntity = null;
 
-    const layerVis = { arcs: true, ghostPath: true, jamDome: true, stalks: true, terrain: true };
-    let viewState = { longitude: ORIGIN_LON, latitude: ORIGIN_LAT, zoom: 14.3, pitch: 58, bearing: -24 };
+    const layerVis = {
+        arcs: true,
+        ghostPath: true,
+        jamDome: true,
+        stalks: true,
+        terrain: true
+    };
+
+    let viewState = {
+        longitude: ORIGIN_LON,
+        latitude: ORIGIN_LAT,
+        zoom: 14.3,
+        pitch: 58,
+        bearing: -24
+    };
 
     function metersToLngLat(eastMeters, northMeters) {
         const dLat = northMeters / 111320.0;
@@ -698,6 +695,7 @@
 
         container.innerHTML = `
             <div style="display:flex; flex-direction:column; gap:10px;">
+                <!-- TOP C2 COMMAND & FORMATION BAR -->
                 <div class="c2-command-bar">
                     <div style="display:flex; align-items:center; gap:10px;">
                         <span style="font-size:12px; font-weight:800; color:#00E5FF; letter-spacing:0.1em;">
@@ -717,6 +715,7 @@
                     </div>
                 </div>
 
+                <!-- SECOND BAR: CAMERA LOCK-ON & LAYER FILTERS -->
                 <div class="c2-command-bar" style="padding:7px 16px;">
                     <div class="c2-btn-group">
                         <span style="font-size:9px; color:#8A99AD; font-family:monospace;">CAMERA LOCK:</span>
@@ -738,13 +737,18 @@
                     </div>
                 </div>
 
+                <!-- MAIN 3D THEATRE VIEWPORT -->
                 <div id="deck-theatre-wrap" class="deck-theatre-wrap" style="cursor:grab;">
                     <canvas id="deck-hud-grid-canvas" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:2;"></canvas>
 
+                    <!-- TOP-LEFT CAMERA & NAVIGATION HUD -->
                     <div class="c2-hud-panel" style="top:12px; left:12px; min-width:255px;">
                         <div style="color:#00E5FF; font-weight:800; margin-bottom:6px; display:flex; justify-content:space-between;">
                             <span>3D CAMERA &amp; OPTICS</span>
                             <span id="c2-lock-label" style="color:#00FFA3;">FREE ORBIT</span>
+                        </div>
+                        <div style="font-size:9px; color:#8A99AD; margin-bottom:8px;">
+                            Left-Drag: 3D Rotate/Pitch &bull; Right-Drag: Pan &bull; Scroll: Zoom
                         </div>
                         <div class="c2-slider-row">
                             <span>3D Pitch (<b id="lbl-pitch">58°</b>):</span>
@@ -760,27 +764,41 @@
                         </div>
                     </div>
 
+                    <!-- TOP-RIGHT SWARM TELEMETRY & HARDWARE ROOTS -->
                     <div class="c2-hud-panel" style="top:12px; right:12px; min-width:280px;">
                         <div style="color:#00FFA3; font-weight:800; margin-bottom:6px;">
-                            ACTIVE SWARM TELEMETRY (RADAR SYNC)
+                            ACTIVE SWARM ENCLAVE TELEMETRY (RADAR SYNC)
                         </div>
                         <div style="border-bottom:1px solid #1E293B; padding-bottom:5px; margin-bottom:5px;">
                             <div style="color:#00FFA3; font-weight:700;">● UAV-ALPHA (LEADER) &bull; 10.240.52.121</div>
-                            <div id="c2-hud-alpha" style="color:#8A99AD; font-size:9px;">ALT: 120.4m | V: 24.2 m/s | STANAG: <b style="color:#00FFA3;">PASS</b></div>
+                            <div id="c2-hud-alpha" style="color:#8A99AD; font-size:9px;">ALT: 120.4m | V: 24.2 m/s | STANAG: <b style="color:#00FFA3;">PASS (23.77ns)</b></div>
                         </div>
                         <div style="border-bottom:1px solid #1E293B; padding-bottom:5px; margin-bottom:5px;">
                             <div style="color:#00E5FF; font-weight:700;">● UAV-BRAVO (WING-1) &bull; 10.240.52.123</div>
-                            <div id="c2-hud-bravo" style="color:#8A99AD; font-size:9px;">ALT: 118.0m | V: 24.0 m/s</div>
+                            <div style="color:#8A99AD; font-size:9px;"><span id="c2-hud-bravo">ALT: 118.0m | V: 24.0 m/s</span> | GPS GUARD: <b id="bravo-guard-state" style="color:#FF3366;">SPOOF BLOCKED</b></div>
                         </div>
                         <div style="border-bottom:1px solid #1E293B; padding-bottom:5px; margin-bottom:5px;">
                             <div style="color:#FFB800; font-weight:700;">● UAV-CHARLIE (RECON) &bull; 10.240.52.124</div>
                             <div id="c2-hud-charlie" style="color:#8A99AD; font-size:9px;">ALT: 145.2m | V: 24.4 m/s | GMTI: <b style="color:#00FFA3;">LOCKED</b></div>
                         </div>
+                        <div>
+                            <div style="color:#C084FC; font-weight:700;">● SAT-CCSDS-133 (LEO) &bull; SPI: 0x0100</div>
+                            <div style="color:#8A99AD; font-size:9px;">KA-BAND UPLINK: 50.100 | ANTI-REPLAY WINDOW: 128-BIT</div>
+                        </div>
                     </div>
 
+                    <!-- BOTTOM-LEFT LEGEND & CBF SAFETY BARRIER -->
+                    <div class="c2-hud-panel" style="bottom:12px; left:12px; display:flex; gap:16px; align-items:center;">
+                        <div><span style="color:#00FFA3;">━━</span> STANAG 4586 Safe Corridor</div>
+                        <div><span style="color:#FF3366;">╌╌</span> Rejected GPS Spoof Ghost Vector</div>
+                        <div><span style="color:#00E5FF;">⌒●</span> Live Packet Stream</div>
+                        <div><span style="color:#C084FC;">⌒●</span> CCSDS 133 Satcom</div>
+                    </div>
+
+                    <!-- BOTTOM-RIGHT CBF INVARIANT METRICS -->
                     <div class="c2-hud-panel" style="bottom:12px; right:12px; border-color:#00FFA3;">
                         <div style="color:#00FFA3; font-weight:800;">CBF BARRIER h(x) = v_max - ||v|| &ge; 0</div>
-                        <div>Safety Margin: <b id="c2-cbf-margin" style="color:#00E5FF;">+55.8 m/s</b> | Air-Gap: <b style="color:#00FFA3;">ARMED (&lt; 15ns)</b></div>
+                        <div>Safety Margin: <b id="c2-cbf-margin" style="color:#00E5FF;">+55.8 m/s</b> | Actuator Air-Gap: <b style="color:#00FFA3;">ARMED (&lt; 15ns)</b></div>
                     </div>
                 </div>
             </div>
@@ -788,6 +806,7 @@
 
         const wrap = document.getElementById("deck-theatre-wrap");
         const hudCanvas = document.getElementById("deck-hud-grid-canvas");
+
         const slPitch = document.getElementById("sl-pitch");
         const slBearing = document.getElementById("sl-bearing");
         const slZoom = document.getElementById("sl-zoom");
@@ -808,14 +827,29 @@
         slBearing?.addEventListener("input", (e) => { viewState.bearing = Number(e.target.value); syncSlidersFromView(); });
         slZoom?.addEventListener("input", (e) => { viewState.zoom = Number(e.target.value); syncSlidersFromView(); });
 
-        const formMap = { "c2-form-v": "v_formation", "c2-form-echelon": "echelon", "c2-form-diamond": "diamond", "c2-form-orbit": "orbit" };
+        const formMap = {
+            "c2-form-v": "v_formation",
+            "c2-form-echelon": "echelon",
+            "c2-form-diamond": "diamond",
+            "c2-form-orbit": "orbit"
+        };
         Object.keys(formMap).forEach(btnId => {
             document.getElementById(btnId)?.addEventListener("click", (e) => {
                 currentFormation = formMap[btnId];
                 Object.keys(formMap).forEach(id => document.getElementById(id)?.classList.remove("active-green"));
                 e.currentTarget.classList.add("active-green");
+
                 const payload = JSON.stringify({ formation: currentFormation });
-                fetch(`${RADAR_API}/formation`, { method: "POST", headers: { "Content-Type": "application/json" }, body: payload }).catch(() => {});
+                fetch(`${RADAR_API}/formation`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: payload
+                }).catch(() => { });
+                fetch(`http://${HOST}:18090/formation`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: payload
+                }).catch(() => { });
             });
         });
 
@@ -823,6 +857,11 @@
             isJammingActive = !isJammingActive;
             e.currentTarget.classList.toggle("active-danger", isJammingActive);
             e.currentTarget.textContent = isJammingActive ? "[!] EW JAMMER: ACTIVE" : "[+] EW JAMMER: SUPPRESSED";
+            const bState = document.getElementById("bravo-guard-state");
+            if (bState) {
+                bState.textContent = isJammingActive ? "SPOOF BLOCKED" : "NOMINAL";
+                bState.style.color = isJammingActive ? "#FF3366" : "#00FFA3";
+            }
         });
 
         container.querySelectorAll("[data-lock]").forEach(btn => {
@@ -848,19 +887,27 @@
             });
         });
 
-        let dragMode = null, lastX = 0, lastY = 0;
+        let dragMode = null;
+        let lastX = 0, lastY = 0;
         wrap.addEventListener("mousedown", (e) => {
             if (e.target.tagName === "INPUT" || e.target.tagName === "BUTTON") return;
             dragMode = (e.button === 2 || e.ctrlKey || e.shiftKey) ? "pan" : "rotate";
             wrap.style.cursor = dragMode === "pan" ? "move" : "grabbing";
-            lastX = e.clientX; lastY = e.clientY;
+            lastX = e.clientX;
+            lastY = e.clientY;
         });
-        window.addEventListener("mouseup", () => { dragMode = null; wrap.style.cursor = "grab"; });
+        window.addEventListener("mouseup", () => {
+            dragMode = null;
+            wrap.style.cursor = "grab";
+        });
         wrap.addEventListener("contextmenu", (e) => e.preventDefault());
         window.addEventListener("mousemove", (e) => {
             if (!dragMode) return;
-            const dx = e.clientX - lastX, dy = e.clientY - lastY;
-            lastX = e.clientX; lastY = e.clientY;
+            const dx = e.clientX - lastX;
+            const dy = e.clientY - lastY;
+            lastX = e.clientX;
+            lastY = e.clientY;
+
             if (dragMode === "rotate") {
                 viewState.bearing = ((viewState.bearing + dx * 0.4 + 540) % 360) - 180;
                 viewState.pitch = Math.max(5, Math.min(85, viewState.pitch + dy * 0.35));
@@ -888,7 +935,10 @@
         const posGcs = { x: 0, y: -420, z: 18 };
         const posEw = { x: 420, y: 220, z: 42 };
 
-        const trailAlpha = [], trailBravo = [], trailCharlie = [];
+        const trailAlpha = [];
+        const trailBravo = [];
+        const trailCharlie = [];
+
         const waypointGates = [
             { id: "WP-01 [ENTRY]", x: -160, y: -180, z: 115 },
             { id: "WP-02 [CORRIDOR]", x: -60, y: 0, z: 120 },
@@ -901,13 +951,19 @@
         let radarTargetCharlie = { x: 135, y: -25, z: 145, heading: 0, roll: 0, v_mps: 24.4, cbf_h: 55.6 };
         let radarTargetSat = null;
         let radarFeedOnline = false;
+        let radarLastSeq = 100;
 
         function normalizeDrone(raw, fallback) {
             if (!raw) return fallback;
-            const rollRad = (raw.roll !== undefined) ? Number(raw.roll) : ((Number(raw.roll_deg || 0) * Math.PI) / 180.0);
+            const rollRad = (raw.roll !== undefined)
+                ? Number(raw.roll)
+                : ((Number(raw.roll_deg || 0) * Math.PI) / 180.0);
             return {
-                x: Number(raw.x ?? fallback.x), y: Number(raw.y ?? fallback.y), z: Number(raw.z ?? fallback.z),
-                heading: Number(raw.heading ?? fallback.heading), roll: rollRad,
+                x: Number(raw.x ?? fallback.x),
+                y: Number(raw.y ?? fallback.y),
+                z: Number(raw.z ?? fallback.z),
+                heading: Number(raw.heading ?? fallback.heading),
+                roll: rollRad,
                 v_mps: Number(raw.v_mps ?? fallback.v_mps),
                 cbf_h: Number(raw.cbf_h ?? (80.0 - Number(raw.v_mps ?? 24.0)))
             };
@@ -918,10 +974,18 @@
             try {
                 const resp = await fetch(`${RADAR_API}/telemetry`, { cache: "no-store" });
                 if (resp.ok) data = await resp.json();
-            } catch (_) {}
+            } catch (_) { }
+
+            if (!data) {
+                try {
+                    const fb = await fetch(`http://${HOST}:18090/telemetry`, { cache: "no-store" });
+                    if (fb.ok) data = await fb.json();
+                } catch (_) { }
+            }
 
             if (data) {
                 radarFeedOnline = true;
+                radarLastSeq = data.seq || radarLastSeq;
                 if (data.drones) {
                     radarTargetAlpha = normalizeDrone(data.drones.alpha, radarTargetAlpha);
                     radarTargetBravo = normalizeDrone(data.drones.bravo, radarTargetBravo);
@@ -930,7 +994,7 @@
                 radarTargetSat = data.sat || null;
 
                 const hudA = document.getElementById("c2-hud-alpha");
-                if (hudA) hudA.innerHTML = `ALT: ${radarTargetAlpha.z.toFixed(1)}m | V: ${radarTargetAlpha.v_mps.toFixed(1)} m/s | STANAG: <b style="color:#00FFA3;">PASS</b>`;
+                if (hudA) hudA.innerHTML = `ALT: ${radarTargetAlpha.z.toFixed(1)}m | V: ${radarTargetAlpha.v_mps.toFixed(1)} m/s | STANAG: <b style="color:#00FFA3;">PASS (23.77ns)</b>`;
                 const hudB = document.getElementById("c2-hud-bravo");
                 if (hudB) hudB.textContent = `ALT: ${radarTargetBravo.z.toFixed(1)}m | V: ${radarTargetBravo.v_mps.toFixed(1)} m/s`;
                 const hudC = document.getElementById("c2-hud-charlie");
@@ -953,8 +1017,8 @@
         function animateTheatre() {
             c2AnimId = requestAnimationFrame(animateTheatre);
             tick += 0.016;
-            const k = 0.22;
 
+            const k = 0.22;
             posAlpha.x += (radarTargetAlpha.x - posAlpha.x) * k;
             posAlpha.y += (radarTargetAlpha.y - posAlpha.y) * k;
             posAlpha.z += (radarTargetAlpha.z - posAlpha.z) * k;
@@ -997,88 +1061,378 @@
 
             render7LayerTheatre(hudCanvas, {
                 posAlpha, posBravo, posCharlie, posGcs, posEw, posSat,
-                trailAlpha, trailBravo, trailCharlie, waypointGates, tick
+                trailAlpha, trailBravo, trailCharlie, waypointGates, tick,
+                dockerGcsOnline: radarFeedOnline, dockerLastSeq: radarLastSeq
             });
         }
 
         animateTheatre();
     }
 
+    // ========================================================================
+    // 4. 7-LAYER 3D TACTICAL THEATRE RENDERING PIPELINE (FULL ORIGINAL)
+    // ========================================================================
     function render7LayerTheatre(canvas, state) {
         if (!canvas) return;
-        const w = canvas.clientWidth || 960, h = canvas.clientHeight || 600;
-        if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+        const w = canvas.clientWidth || 960;
+        const h = canvas.clientHeight || 600;
+        if (canvas.width !== w || canvas.height !== h) {
+            canvas.width = w;
+            canvas.height = h;
+        }
         const ctx = canvas.getContext("2d");
 
         const bgGrad = ctx.createRadialGradient(w / 2, h / 2, 50, w / 2, h / 2, Math.max(w, h) * 0.75);
-        bgGrad.addColorStop(0, "#07101e"); bgGrad.addColorStop(1, "#02050a");
-        ctx.fillStyle = bgGrad; ctx.fillRect(0, 0, w, h);
+        bgGrad.addColorStop(0, "#07101e");
+        bgGrad.addColorStop(1, "#02050a");
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, w, h);
 
         const yaw = (viewState.bearing * Math.PI) / 180.0;
         const pitch = ((90 - viewState.pitch) * Math.PI) / 180.0;
         const zoomScale = Math.pow(2, viewState.zoom - 14.3);
+
         const panEast = (viewState.longitude - ORIGIN_LON) * 111320 * Math.cos(ORIGIN_LAT * Math.PI / 180);
         const panNorth = (viewState.latitude - ORIGIN_LAT) * 111320;
 
         function project3D(eastM, northM, altM) {
-            const rx = eastM - panEast, ry = northM - panNorth, rz = altM;
+            const rx = eastM - panEast;
+            const ry = northM - panNorth;
+            const rz = altM;
+
             const cosY = Math.cos(yaw), sinY = Math.sin(yaw);
-            const x1 = rx * cosY - ry * sinY, y1 = rx * sinY + ry * cosY;
+            const x1 = rx * cosY - ry * sinY;
+            const y1 = rx * sinY + ry * cosY;
+
             const cosP = Math.cos(pitch), sinP = Math.sin(pitch);
-            const y2 = y1 * sinP - rz * cosP, z2 = y1 * cosP + rz * sinP;
+            const y2 = y1 * sinP - rz * cosP;
+            const z2 = y1 * cosP + rz * sinP;
+
             const fov = 780 * zoomScale;
             const depth = 1150 + z2;
             const s = fov / Math.max(60, depth);
-            return { x: w / 2 + x1 * s, y: h / 2 + 40 - y2 * s, s };
+
+            return { x: w / 2 + x1 * s, y: h / 2 + 40 - y2 * s, s, depth };
         }
 
-        // Layer 1: Terrain
+        // LAYER 1: 3D TOPOGRAPHIC WIREFRAME TERRAIN & TACTICAL GRID
+        const gridRange = 720;
+        const gridStep = 80;
+
         if (layerVis.terrain) {
             ctx.lineWidth = 1;
-            for (let x = -720; x <= 720; x += 80) {
+            for (let x = -gridRange; x <= gridRange; x += gridStep) {
                 ctx.beginPath();
-                for (let y = -720; y <= 720; y += 80) {
-                    const pt = project3D(x, y, getTerrainElevation(x, y));
-                    if (y === -720) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
+                for (let y = -gridRange; y <= gridRange; y += gridStep) {
+                    const elev = getTerrainElevation(x, y);
+                    const pt = project3D(x, y, elev);
+                    if (y === -gridRange) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
                 }
-                ctx.strokeStyle = "rgba(0, 180, 255, 0.13)"; ctx.stroke();
+                ctx.strokeStyle = (x === 0) ? "rgba(0, 229, 255, 0.35)" : "rgba(0, 180, 255, 0.13)";
+                ctx.stroke();
             }
-            for (let y = -720; y <= 720; y += 80) {
+            for (let y = -gridRange; y <= gridRange; y += gridStep) {
                 ctx.beginPath();
-                for (let x = -720; x <= 720; x += 80) {
-                    const pt = project3D(x, y, getTerrainElevation(x, y));
-                    if (x === -720) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
+                for (let x = -gridRange; x <= gridRange; x += gridStep) {
+                    const elev = getTerrainElevation(x, y);
+                    const pt = project3D(x, y, elev);
+                    if (x === -gridRange) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
                 }
-                ctx.strokeStyle = "rgba(0, 180, 255, 0.13)"; ctx.stroke();
+                ctx.strokeStyle = (y === 0) ? "rgba(0, 229, 255, 0.35)" : "rgba(0, 180, 255, 0.13)";
+                ctx.stroke();
             }
         }
 
-        // Layer 4: Ribbons
-        function drawRibbon(trail, rgb) {
+        [250, 500, 750].forEach((rad, idx) => {
+            ctx.strokeStyle = idx === 1 ? "rgba(0, 255, 163, 0.32)" : "rgba(0, 255, 163, 0.18)";
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            for (let a = 0; a <= Math.PI * 2 + 0.1; a += 0.1) {
+                const pt = project3D(Math.cos(a) * rad, Math.sin(a) * rad, 0);
+                if (a === 0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
+            }
+            ctx.stroke();
+        });
+
+        // LAYER 2: 3D GEODESIC EW JAMMING DOME (HEMISPHERE + SWEEP)
+        if (layerVis.jamDome && isJammingActive) {
+            const domeR = 230;
+            [0.0, 0.35, 0.65, 0.9].forEach(elevFactor => {
+                const ringAlt = Math.sin(elevFactor * Math.PI / 2) * 165;
+                const ringRad = Math.cos(elevFactor * Math.PI / 2) * domeR;
+                ctx.strokeStyle = "rgba(255, 51, 102, 0.38)";
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                for (let a = 0; a <= Math.PI * 2 + 0.12; a += 0.12) {
+                    const pt = project3D(state.posEw.x + Math.cos(a) * ringRad, state.posEw.y + Math.sin(a) * ringRad, ringAlt);
+                    if (a === 0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
+                }
+                ctx.stroke();
+            });
+
+            for (let m = 0; m < 6; m++) {
+                const mAngle = (m / 6) * Math.PI + state.tick * 0.25;
+                ctx.strokeStyle = "rgba(255, 51, 102, 0.28)";
+                ctx.beginPath();
+                for (let p = 0; p <= Math.PI; p += 0.15) {
+                    const rProj = Math.cos(p) * domeR;
+                    const altProj = Math.sin(p) * 165;
+                    const pt = project3D(
+                        state.posEw.x + Math.cos(mAngle) * rProj,
+                        state.posEw.y + Math.sin(mAngle) * rProj,
+                        altProj
+                    );
+                    if (p === 0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
+                }
+                ctx.stroke();
+            }
+        }
+
+        // LAYER 3: 3D AIRSPACE WAYPOINT CORRIDOR GATES
+        state.waypointGates.forEach(gate => {
+            const gw = 32, gh = 22;
+            const c1 = project3D(gate.x - gw, gate.y, gate.z - gh);
+            const c2 = project3D(gate.x + gw, gate.y, gate.z - gh);
+            const c3 = project3D(gate.x + gw, gate.y, gate.z + gh);
+            const c4 = project3D(gate.x - gw, gate.y, gate.z + gh);
+
+            ctx.strokeStyle = "rgba(0, 229, 255, 0.45)";
+            ctx.lineWidth = 1.4;
+            ctx.beginPath();
+            ctx.moveTo(c1.x, c1.y); ctx.lineTo(c2.x, c2.y);
+            ctx.lineTo(c3.x, c3.y); ctx.lineTo(c4.x, c4.y);
+            ctx.closePath();
+            ctx.stroke();
+
+            ctx.font = "8px 'JetBrains Mono', monospace";
+            ctx.fillStyle = "rgba(0, 229, 255, 0.75)";
+            ctx.fillText(gate.id, c4.x, c4.y - 4);
+        });
+
+        // LAYER 4: 3D FLIGHT RIBBONS, CURTAINS & GHOST SPOOF VECTOR
+        function drawFlightRibbon(trail, colorRgb) {
             if (trail.length < 2) return;
-            ctx.strokeStyle = `rgba(${rgb}, 0.85)`; ctx.lineWidth = 2.4; ctx.beginPath();
+            ctx.strokeStyle = `rgba(${colorRgb}, 0.85)`;
+            ctx.lineWidth = 2.4;
+            ctx.beginPath();
             trail.forEach((p, idx) => {
                 const pt = project3D(p.x, p.y, p.z);
                 if (idx === 0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
             });
             ctx.stroke();
-        }
-        drawRibbon(state.trailAlpha, "0, 255, 163");
-        drawRibbon(state.trailBravo, "0, 229, 255");
-        drawRibbon(state.trailCharlie, "255, 184, 0");
 
-        // Layer 6: Airframes
-        function drawDrone(pos, col, name) {
+            if (layerVis.stalks) {
+                ctx.strokeStyle = `rgba(${colorRgb}, 0.16)`;
+                ctx.lineWidth = 1;
+                for (let i = 0; i < trail.length; i += 4) {
+                    const p = trail[i];
+                    const top = project3D(p.x, p.y, p.z);
+                    const bot = project3D(p.x, p.y, 0);
+                    ctx.beginPath(); ctx.moveTo(top.x, top.y); ctx.lineTo(bot.x, bot.y); ctx.stroke();
+                }
+            }
+        }
+
+        drawFlightRibbon(state.trailAlpha, "0, 255, 163");
+        drawFlightRibbon(state.trailBravo, "0, 229, 255");
+        drawFlightRibbon(state.trailCharlie, "255, 184, 0");
+
+        if (layerVis.ghostPath && isJammingActive) {
+            const pB = project3D(state.posBravo.x, state.posBravo.y, state.posBravo.z);
+            const ghostX = state.posBravo.x + 250;
+            const ghostY = state.posBravo.y + 190;
+            const ghostZ = state.posBravo.z + 75;
+            const pGhost = project3D(ghostX, ghostY, ghostZ);
+
+            ctx.strokeStyle = "#FF3366";
+            ctx.lineWidth = 2.2;
+            ctx.setLineDash([6, 4]);
+            ctx.beginPath(); ctx.moveTo(pB.x, pB.y); ctx.lineTo(pGhost.x, pGhost.y); ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.strokeStyle = "#FF3366";
+            ctx.beginPath();
+            ctx.arc(pGhost.x, pGhost.y, 8, 0, Math.PI * 2);
+            ctx.moveTo(pGhost.x - 6, pGhost.y - 6); ctx.lineTo(pGhost.x + 6, pGhost.y + 6);
+            ctx.moveTo(pGhost.x + 6, pGhost.y - 6); ctx.lineTo(pGhost.x - 6, pGhost.y + 6);
+            ctx.stroke();
+
+            ctx.fillStyle = "#FF3366";
+            ctx.font = "bold 9px 'JetBrains Mono', monospace";
+            ctx.fillText("[CBF BLOCKED] SPOOFED GPS GHOST VECTOR (ΔV=420m/s)", pGhost.x + 12, pGhost.y + 3);
+        }
+
+        // LAYER 5: 3D PARABOLIC DATA-LINK ARCS & LIVE PACKET PULSES
+        function drawParabolicLink(from, to, arcColor, pulseColor, arcHeight, isHostile = false) {
+            if (!layerVis.arcs) return;
+            ctx.strokeStyle = arcColor;
+            ctx.lineWidth = isHostile ? 1.8 : 1.5;
+            if (isHostile) ctx.setLineDash([4, 4]); else ctx.setLineDash([]);
+
+            ctx.beginPath();
+            for (let t = 0; t <= 1.02; t += 0.05) {
+                const ix = from.x + (to.x - from.x) * t;
+                const iy = from.y + (to.y - from.y) * t;
+                const iz = from.z + (to.z - from.z) * t + Math.sin(t * Math.PI) * arcHeight;
+                const pt = project3D(ix, iy, iz);
+                if (t === 0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            const pulseT = (state.tick * (isHostile ? 1.3 : 0.9)) % 1.0;
+            const px = from.x + (to.x - from.x) * pulseT;
+            const py = from.y + (to.y - from.y) * pulseT;
+            const pz = from.z + (to.z - from.z) * pulseT + Math.sin(pulseT * Math.PI) * arcHeight;
+            const pPulse = project3D(px, py, pz);
+
+            ctx.fillStyle = pulseColor;
+            ctx.beginPath();
+            ctx.arc(pPulse.x, pPulse.y, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        drawParabolicLink(state.posSat, state.posGcs, "rgba(192, 132, 252, 0.55)", "#C084FC", 110);
+        drawParabolicLink(state.posGcs, state.posAlpha, "rgba(0, 229, 255, 0.65)", "#00E5FF", 85);
+        drawParabolicLink(state.posAlpha, state.posBravo, "rgba(0, 255, 163, 0.6)", "#00FFA3", 35);
+        drawParabolicLink(state.posAlpha, state.posCharlie, "rgba(0, 255, 163, 0.6)", "#FFB800", 35);
+
+        if (isJammingActive) {
+            drawParabolicLink(state.posEw, state.posAlpha, "rgba(255, 51, 102, 0.75)", "#FF3366", 65, true);
+            drawParabolicLink(state.posEw, state.posBravo, "rgba(255, 51, 102, 0.75)", "#FF3366", 65, true);
+        }
+
+        // LAYER 6 & 7: 3D STEALTH UAV AIRFRAMES, SATELLITE & MIL-STD CALLSIGNS
+        function draw3DStealthDrone(pos, hexColor, callsign, telemetrySub) {
+            const pCenter = project3D(pos.x, pos.y, pos.z);
+            const pGround = project3D(pos.x, pos.y, 0);
+
+            if (layerVis.stalks) {
+                ctx.strokeStyle = hexColor;
+                ctx.globalAlpha = 0.4;
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(pCenter.x, pCenter.y);
+                ctx.lineTo(pGround.x, pGround.y);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(pGround.x, pGround.y, 5 * pGround.s, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.globalAlpha = 1.0;
+            }
+
+            const scale = 1.35;
+            const cosH = Math.cos(pos.heading || 0);
+            const sinH = Math.sin(pos.heading || 0);
+
+            function rotLocal(lx, ly, lz) {
+                const rx = lx * cosH + ly * sinH;
+                const ry = -lx * sinH + ly * cosH;
+                return project3D(pos.x + rx * scale, pos.y + ry * scale, pos.z + lz * scale);
+            }
+
+            const vNose = rotLocal(0, 24, 0);
+            const vWingL = rotLocal(-22, -12, (pos.roll || 0) * 18);
+            const vInnerL = rotLocal(-6, -8, 0);
+            const vTail = rotLocal(0, -16, 2);
+            const vInnerR = rotLocal(6, -8, 0);
+            const vWingR = rotLocal(22, -12, -(pos.roll || 0) * 18);
+            const vCanopy = rotLocal(0, 6, 4);
+
+            ctx.fillStyle = "rgba(15, 23, 42, 0.92)";
+            ctx.strokeStyle = hexColor;
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.moveTo(vNose.x, vNose.y);
+            ctx.lineTo(vWingL.x, vWingL.y);
+            ctx.lineTo(vInnerL.x, vInnerL.y);
+            ctx.lineTo(vTail.x, vTail.y);
+            ctx.lineTo(vInnerR.x, vInnerR.y);
+            ctx.lineTo(vWingR.x, vWingR.y);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(vNose.x, vNose.y); ctx.lineTo(vCanopy.x, vCanopy.y);
+            ctx.lineTo(vTail.x, vTail.y);
+            ctx.stroke();
+
+            ctx.fillStyle = hexColor;
+            ctx.beginPath();
+            ctx.arc(vTail.x, vTail.y, Math.max(3, 5 * pCenter.s), 0, Math.PI * 2);
+            ctx.fill();
+
+            if (isJammingActive) {
+                ctx.strokeStyle = "rgba(0, 255, 163, 0.35)";
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(pCenter.x, pCenter.y, Math.max(16, 28 * pCenter.s), 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            const lblX = pCenter.x + 18;
+            const lblY = pCenter.y - 12;
+            ctx.fillStyle = "rgba(7, 11, 20, 0.82)";
+            ctx.strokeStyle = hexColor;
+            ctx.lineWidth = 1;
+            ctx.fillRect(lblX, lblY - 11, 178, 28);
+            ctx.strokeRect(lblX, lblY - 11, 178, 28);
+
+            ctx.font = "bold 10px 'JetBrains Mono', monospace";
+            ctx.fillStyle = hexColor;
+            ctx.fillText(callsign, lblX + 6, lblY);
+            ctx.font = "9px 'JetBrains Mono', monospace";
+            ctx.fillStyle = "#CBD5E1";
+            ctx.fillText(telemetrySub, lblX + 6, lblY + 12);
+        }
+
+        function drawStationNode(pos, hexColor, title, sub, isSat = false) {
             const pt = project3D(pos.x, pos.y, pos.z);
             const gnd = project3D(pos.x, pos.y, 0);
-            ctx.strokeStyle = col + "55"; ctx.beginPath(); ctx.moveTo(pt.x, pt.y); ctx.lineTo(gnd.x, gnd.y); ctx.stroke();
-            ctx.fillStyle = col; ctx.beginPath(); ctx.arc(pt.x, pt.y, 5, 0, Math.PI * 2); ctx.fill();
-            ctx.font = "bold 9.5px 'JetBrains Mono', monospace"; ctx.fillStyle = col;
-            ctx.fillText(name, pt.x + 8, pt.y - 2);
+
+            if (layerVis.stalks) {
+                ctx.strokeStyle = hexColor;
+                ctx.globalAlpha = 0.3;
+                ctx.beginPath(); ctx.moveTo(pt.x, pt.y); ctx.lineTo(gnd.x, gnd.y); ctx.stroke();
+                ctx.globalAlpha = 1.0;
+            }
+
+            ctx.strokeStyle = hexColor;
+            ctx.fillStyle = "rgba(13, 19, 33, 0.9)";
+            ctx.lineWidth = 2;
+
+            if (isSat) {
+                ctx.fillRect(pt.x - 6, pt.y - 6, 12, 12);
+                ctx.strokeRect(pt.x - 6, pt.y - 6, 12, 12);
+                ctx.fillStyle = "rgba(192, 132, 252, 0.45)";
+                ctx.fillRect(pt.x - 26, pt.y - 4, 16, 8);
+                ctx.fillRect(pt.x + 10, pt.y - 4, 16, 8);
+                ctx.strokeRect(pt.x - 26, pt.y - 4, 16, 8);
+                ctx.strokeRect(pt.x + 10, pt.y - 4, 16, 8);
+            } else {
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            ctx.font = "bold 10px 'JetBrains Mono', monospace";
+            ctx.fillStyle = hexColor;
+            ctx.fillText(title, pt.x + 14, pt.y - 2);
+            ctx.font = "9px 'JetBrains Mono', monospace";
+            ctx.fillStyle = "#94A3B8";
+            ctx.fillText(sub, pt.x + 14, pt.y + 10);
         }
-        drawDrone(state.posAlpha, "#00FFA3", "UAV-ALPHA (LEADER)");
-        drawDrone(state.posBravo, "#00E5FF", "UAV-BRAVO (WING)");
-        drawDrone(state.posCharlie, "#FFB800", "UAV-CHARLIE (RECON - GMTI)");
+
+        drawStationNode(state.posGcs, "#00E5FF", "GCS-TACTICAL C2", "10.240.52.120 | STANAG 4586 TX", false);
+        drawStationNode(state.posEw, "#FF3366", "EW-SPOOFER [HOSTILE]", isJammingActive ? "10.240.52.122 | RF JAMMING" : "SUPPRESSED", false);
+        drawStationNode(state.posSat, "#C084FC", "SAT-CCSDS-133 [LEO]", "SPI:0x0100 | KA-BAND ORBIT", true);
+
+        draw3DStealthDrone(state.posAlpha, "#00FFA3", "UAV-ALPHA [LEADER]", `ALT:${state.posAlpha.z.toFixed(0)}m | 23.77ns PASS`);
+        draw3DStealthDrone(state.posBravo, "#00E5FF", "UAV-BRAVO [WING-1]", `ALT:${state.posBravo.z.toFixed(0)}m | ECHELON LOCK`);
+        draw3DStealthDrone(state.posCharlie, "#FFB800", "UAV-CHARLIE [RECON]", `ALT:${state.posCharlie.z.toFixed(0)}m | GMTI + FLIR`);
     }
 
     window.SentinelUI.registerTab({
@@ -1089,5 +1443,5 @@
         renderView: (container) => initDeckGlSwarmC2(container)
     });
 
-    console.log("[Aerospace Plugin] Dedicated Charlie Vehicle Tracking Radar + Alpha 360° Airspace Radar registered.");
+    console.log("[Aerospace Plugin] Charlie Vehicle Radar + Alpha 360° Radar + Full 7-Layer 3D Tactical Swarm C2 registered.");
 })();
