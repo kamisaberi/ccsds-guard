@@ -342,6 +342,7 @@ services:
       - "18091:8090"
     volumes:
       - ./pcaps:/app/pcaps:ro
+      - ../../apparatus_plugins:/app/apparatus_plugins:ro
     command: [
       "--type", "radar_360",
       "--name", "Tactical-Swarm-Radar-360",
