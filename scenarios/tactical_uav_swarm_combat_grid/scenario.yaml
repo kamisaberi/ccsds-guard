@@ -367,6 +367,7 @@ services:
       - "18092:8090"
     volumes:
       - ./pcaps:/app/pcaps:ro
+      - ../../apparatus_plugins:/app/apparatus_plugins:ro
     command: [
       "--type", "flir_thermal",
       "--name", "Charlie-FLIR-Radiometric-Gimbal",
