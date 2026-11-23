@@ -12,3 +12,4 @@
 #include "ccsds_guard/defense/telemetry_desync.hpp"
 #include "ccsds_guard/defense/actuator_airgap.hpp"
 #include "ccsds_guard/pipeline/guard_engine.hpp"
+#include "ccsds_guard/defense/rover_slip_cbf.hpp"
