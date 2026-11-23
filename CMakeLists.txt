@@ -57,6 +57,7 @@ set(LIB_SOURCES
     src/defense/telemetry_desync.cpp
     src/defense/actuator_airgap.cpp
     src/pipeline/guard_engine.cpp
+    src/defense/rover_slip_cbf.cpp
 )
 
 # Shared and Static Libraries
