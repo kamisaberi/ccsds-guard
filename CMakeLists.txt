@@ -240,3 +240,7 @@ target_link_libraries(test_tier1_tier2_pipeline PRIVATE
     ${CMAKE_DL_LIBS}
 )
 add_test(NAME TestTier1Tier2Pipeline COMMAND test_tier1_tier2_pipeline)
+
+add_executable(test_rover_slip tests/test_rover_slip.cpp)
+target_link_libraries(test_rover_slip PRIVATE ccsds_guard)
+add_test(NAME TestRoverSlip COMMAND test_rover_slip)
