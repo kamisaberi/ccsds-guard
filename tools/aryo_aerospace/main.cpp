@@ -1,4 +1,3 @@
-// File: /home/kami/ccsds-guard/tools/aryo_aerospace/main.cpp
 
 #include "ccsds_guard/ccsds_guard.hpp"
 #include <iostream>
