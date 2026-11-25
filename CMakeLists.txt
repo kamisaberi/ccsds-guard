@@ -15,7 +15,7 @@ set(CMAKE_INSTALL_RPATH "/usr/local/lib")
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # Compiler performance flags
-if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options(
         -O3
         -march=native
@@ -100,6 +100,8 @@ target_link_libraries(ccsds_guard_static PUBLIC
 add_executable(ccsds-guard-ctl tools/ccsds_guard_ctl/main.cpp)
 target_link_libraries(ccsds-guard-ctl PRIVATE
     ccsds_guard
+    ${SENTINELFS_LIB}
+
     -Wl,--no-as-needed
     ${BLACKBOX_LIB}
     ${XINFER_LIB}
